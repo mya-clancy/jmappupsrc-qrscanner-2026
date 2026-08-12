@@ -72,21 +72,23 @@
       transform-origin: top center;
     }
     
-    /* Responsive scaling for mobile preview */
-    @media (max-width: 1050px) {
-      .id-pass-card { transform: scale(0.8); margin-bottom: -127px; }
+    /* Responsive scaling for mobile preview inside modal */
+    .id-pass-card {
+      
+      
     }
-    @media (max-width: 850px) {
-      .id-pass-card { transform: scale(0.65); margin-bottom: -223px; }
+    @media (max-width: 800px) {
+      .id-pass-card {   }
     }
-    @media (max-width: 650px) {
-      .id-pass-card { transform: scale(0.5); margin-bottom: -319px; }
+    @media (max-width: 600px) {
+      .id-pass-card {   }
     }
-    @media (max-width: 500px) {
-      .id-pass-card { transform: scale(0.35); margin-bottom: -414px; }
+    @media (max-width: 450px) {
+      .id-pass-card {   }
     }
     @media (max-width: 380px) {
-      .id-pass-card { transform: scale(0.28); margin-bottom: -459px; }
+      .id-pass-card {   }
+    }
     }
 
     .id-pass-header-banner {
@@ -222,6 +224,7 @@
       #printable-id-card, #printable-id-card * { visibility: visible; }
       #printable-id-card { position: absolute; left: 0; top: 0; width: 100%; }
     }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body class="bg-[#FAFAFA] dark:bg-[#111111] text-slate-800 dark:text-slate-200 min-h-screen transition-colors duration-200">
@@ -365,7 +368,7 @@
           </button>
 
           <button onclick="switchTab('scanner')" id="nav-tab-scanner" class="nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-pup-gold">
-            <i class="fa-solid fa-qrcode text-base"></i> Web Camera Scanner
+            <i class="fa-solid fa-qrcode text-base"></i> QR Camera Scanner
           </button>
 
           <button onclick="switchTab('scans')" id="nav-tab-scans" class="nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-pup-gold">
@@ -617,7 +620,7 @@
               <canvas id="pass-card-qr" class="w-36 h-36"></canvas>
               <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div class="bg-white p-1 flex items-center justify-center" style="width: 28%; height: 28%;">
-                  <img src="../assets/jmap_kappa.png" alt="JMAP Kappa" class="w-full h-full object-contain" />
+                  <img src="assets/jmap_kappa.png" alt="JMAP Kappa" class="w-full h-full object-contain" />
                 </div>
               </div>
             </div>
