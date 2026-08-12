@@ -28,7 +28,7 @@
   </script>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -74,23 +74,24 @@
     
     /* Responsive scaling for mobile preview inside modal */
     .id-pass-card {
-      
-      
+      transform: scale(0.68); 
+      margin-bottom: -204px;
+      margin-left: -162px;
+      margin-right: -162px;
     }
     @media (max-width: 800px) {
-      .id-pass-card {   }
+      .id-pass-card { transform: scale(0.55); margin-bottom: -287px; margin-left: -227px; margin-right: -227px; }
     }
     @media (max-width: 600px) {
-      .id-pass-card {   }
+      .id-pass-card { transform: scale(0.40); margin-bottom: -382px; margin-left: -303px; margin-right: -303px; }
     }
     @media (max-width: 450px) {
-      .id-pass-card {   }
+      .id-pass-card { transform: scale(0.30); margin-bottom: -446px; margin-left: -354px; margin-right: -354px; }
     }
     @media (max-width: 380px) {
-      .id-pass-card {   }
+      .id-pass-card { transform: scale(0.26); margin-bottom: -472px; margin-left: -374px; margin-right: -374px; }
     }
-    }
-
+    
     .id-pass-header-banner {
       background-color: #FFC107;
       border-bottom: 4px solid #EA580C;
@@ -908,13 +909,19 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
             
             try {
-                const dataUrl = await htmlToImage.toJpeg(card, { 
-                quality: 1.0, 
-                pixelRatio: 1, 
-                width: 1013, 
-                height: 638,
-                style: { transform: 'none', transformOrigin: 'top left', margin: '0' }
-            });
+                const origTransform = card.style.transform;
+                card.style.transform = 'scale(1)';
+                card.style.margin = '0';
+                
+                const canvas = await html2canvas(card, {
+                    scale: 2,
+                    useCORS: true,
+                    width: 1013,
+                    height: 638
+                });
+                
+                card.style.transform = origTransform;
+                const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
                 const blob = dataURLtoBlob(dataUrl);
                 
                 const metadata = {
@@ -981,13 +988,25 @@
         const filename = formatFilename(name, id, sem);
 
         try {
-            const dataUrl = await htmlToImage.toJpeg(card, { 
-                quality: 1.0, 
-                pixelRatio: 1, 
-                width: 1013, 
+            const origTransform = card.style.transform;
+            const origMargin = card.style.margin;
+            
+            card.style.transform = 'scale(1)';
+            card.style.margin = '0';
+            card.style.width = '1013px';
+            card.style.height = '638px';
+            
+            const canvas = await html2canvas(card, {
+                scale: 2,
+                useCORS: true,
+                width: 1013,
                 height: 638,
-                style: { transform: 'none', transformOrigin: 'top left', margin: '0' }
+                backgroundColor: '#ffffff'
             });
+            
+            card.style.transform = origTransform;
+            card.style.margin = origMargin;
+            const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
             const link = document.createElement('a');
             link.download = filename;
             link.href = dataUrl;
