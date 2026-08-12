@@ -42,17 +42,16 @@
     /* ID PASS CARD EXACT REPLICA DESIGN (IMAGE 3) */
     .id-pass-wrapper {
       width: 100%;
-      container-type: inline-size;
       display: flex;
       justify-content: center;
       padding-bottom: 1rem;
+      overflow: hidden;
     }
     
     .id-pass-scale-box {
-      width: 100%;
-      aspect-ratio: 1013 / 638;
       position: relative;
-      max-width: 1013px;
+      transform-origin: top left;
+      margin: 0 auto;
     }
     
     .id-pass-card {
@@ -72,15 +71,6 @@
       box-sizing: border-box;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       transform-origin: top left;
-      /* Dynamic scaling to fit the container perfectly */
-      transform: scale(calc(100cqw / 1013));
-    }
-    
-    /* Ensure it doesn't scale up beyond its original size */
-    @container (min-width: 1013px) {
-      .id-pass-card {
-        transform: scale(1);
-      }
     }
     
     .id-pass-header-banner {
@@ -216,7 +206,8 @@
       #printable-id-card, #printable-id-card * { visibility: visible; }
       #printable-id-card { position: absolute; left: 0; top: 0; width: 100%; }
     }
-    .hidden { display: none !important; }
+    
+    .jmap-hidden { display: none !important; }
   </style>
 </head>
 <body class="bg-[#FAFAFA] dark:bg-[#111111] text-slate-800 dark:text-slate-200 min-h-screen transition-colors duration-200">
@@ -919,6 +910,7 @@
                 });
                 
                 card.style.transform = '';
+                resizeIdPass();
                 card.style.margin = '';
                 card.style.marginBottom = '';
                 card.style.marginLeft = '';
@@ -1014,6 +1006,7 @@
             });
             
             card.style.transform = '';
+                resizeIdPass();
             card.style.margin = '';
             card.style.marginBottom = '';
             card.style.marginLeft = '';
@@ -1087,13 +1080,13 @@
       if (role === 'admin') {
         adminBtn.className = "flex-1 py-2.5 rounded-xl bg-black text-white shadow-sm transition";
         partnerBtn.className = "flex-1 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 transition";
-        adminForm.classList.remove('hidden');
-        partnerForm.classList.add('hidden');
+        adminForm.classList.remove('hidden', 'jmap-hidden');
+        partnerForm.classList.add('jmap-hidden');
       } else {
         partnerBtn.className = "flex-1 py-2.5 rounded-xl bg-pup-gold text-black dark:text-white font-bold shadow-sm transition";
         adminBtn.className = "flex-1 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 transition";
-        partnerForm.classList.remove('hidden');
-        adminForm.classList.add('hidden');
+        partnerForm.classList.remove('hidden', 'jmap-hidden');
+        adminForm.classList.add('jmap-hidden');
       }
     }
 
@@ -1171,8 +1164,8 @@
       localStorage.removeItem('jmap_session_partner_name');
       window.appState.userRole = null;
       window.appState.partnerData = null;
-      document.getElementById('screen-main').classList.add('hidden');
-      document.getElementById('screen-login').classList.remove('hidden');
+      document.getElementById('screen-main').classList.add('jmap-hidden');
+      document.getElementById('screen-login').classList.remove('hidden', 'jmap-hidden');
       document.getElementById('admin-user').value = '';
       document.getElementById('admin-pass').value = '';
       document.getElementById('partner-pin').value = '';
@@ -1183,8 +1176,8 @@
     }
 
     function startSession() {
-      document.getElementById('screen-login').classList.add('hidden');
-      document.getElementById('screen-main').classList.remove('hidden');
+      document.getElementById('screen-login').classList.add('jmap-hidden');
+      document.getElementById('screen-main').classList.remove('hidden', 'jmap-hidden');
 
       const adminEls = document.querySelectorAll('.admin-only');
       const roleText = document.getElementById('user-role-text');
@@ -1192,12 +1185,12 @@
       const settingsRoleText = document.getElementById('settings-user-role');
 
       if (window.appState.userRole === 'admin') {
-        adminEls.forEach(el => el.classList.remove('hidden'));
+        adminEls.forEach(el => el.classList.remove('hidden', 'jmap-hidden'));
         roleText.innerText = "Administrator";
         if (settingsRoleText) settingsRoleText.innerText = "Administrator";
         switchTab('roster');
       } else {
-        adminEls.forEach(el => el.classList.add('hidden'));
+        adminEls.forEach(el => el.classList.add('jmap-hidden'));
         roleText.innerText = window.appState.partnerData.name;
         if (settingsRoleText) settingsRoleText.innerText = window.appState.partnerData.name;
         switchTab('scanner');
@@ -1207,7 +1200,7 @@
     function switchTab(tab) {
       window.activeTab = tab;
 
-      document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-view').forEach(el => el.classList.add('jmap-hidden'));
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('text-black', 'dark:text-white', 'bg-white', 'dark:bg-[#1A1A1A]', 'font-extrabold', 'shadow-sm');
         btn.classList.add('text-slate-500', 'dark:text-slate-400', 'hover:text-black', 'dark:hover:text-pup-gold');
@@ -1216,7 +1209,7 @@
       const targetView = document.getElementById(`view-${tab}`);
       const targetBtn = document.getElementById(`nav-tab-${tab}`);
       
-      if (targetView) targetView.classList.remove('hidden');
+      if (targetView) targetView.classList.remove('hidden', 'jmap-hidden');
       if (targetBtn) {
         targetBtn.classList.remove('text-slate-500', 'dark:text-slate-400', 'hover:text-black', 'dark:hover:text-pup-gold');
         targetBtn.classList.add('text-black', 'dark:text-white', 'bg-white', 'dark:bg-[#1A1A1A]', 'font-extrabold', 'shadow-sm');
@@ -1339,6 +1332,21 @@
       openModal('modal-id-card');
     }
 
+    function resizeIdPass() {
+      const wrapper = document.querySelector('.id-pass-wrapper');
+      const card = document.getElementById('printable-id-card');
+      const scaleBox = document.querySelector('.id-pass-scale-box');
+      if (wrapper && card && scaleBox) {
+        const wrapperWidth = wrapper.clientWidth;
+        let scale = wrapperWidth / 1013;
+        if (scale > 1) scale = 1;
+        card.style.transform = `scale(${scale})`;
+        scaleBox.style.height = `${638 * scale}px`;
+        scaleBox.style.width = `${1013 * scale}px`;
+      }
+    }
+    window.addEventListener('resize', resizeIdPass);
+    
     function initScanner() {
       document.getElementById('scan-result').classList.add('hidden');
       document.getElementById('reader').classList.remove('hidden');
@@ -1515,10 +1523,13 @@
     }
 
     function openModal(id) {
-      document.getElementById(id).classList.remove('hidden');
+      document.getElementById(id).classList.remove('hidden', 'jmap-hidden');
+      if(id === 'modal-id-card') {
+          setTimeout(resizeIdPass, 50); // Resize when opened
+      }
     }
     function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
+      document.getElementById(id).classList.add('jmap-hidden');
     }
 
     function openStudentModal() {
