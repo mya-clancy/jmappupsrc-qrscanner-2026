@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "574456278067",
+    "firebase_url": "https://pupsrc-jmap-qrcodescanner-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "pupsrc-jmap-qrcodescanner",
+    "storage_bucket": "pupsrc-jmap-qrcodescanner.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:574456278067:android:d24601aada2da8b5e24746",
+        "android_client_info": {
+          "package_name": "com.pup.jmapqrscanner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPdFPZIfPGIJXdgDdSyxpUW1SJtwFjqWQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
