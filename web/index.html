@@ -717,16 +717,17 @@
 
 
   <!-- ==================== ADD VOUCHER MODAL ==================== -->
-  <div id="modal-voucher" class="fixed inset-0 z-50 hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+  <div id="modal-voucher" class="fixed inset-0 z-50 jmap-hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white dark:bg-[#1A1A1A] max-w-md w-full rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 space-y-4">
       <div class="flex justify-between items-center border-b border-slate-200 dark:border-neutral-800 pb-3">
-        <h3 class="font-bold text-lg text-black dark:text-white">Distribute Discount Voucher</h3>
-        <button onclick="closeModal('modal-voucher')" class="w-8 h-8 rounded-full bg-white dark:bg-[#1A1A1A] text-slate-500 dark:text-slate-400 flex items-center justify-center">
+        <h3 id="voucher-modal-title" class="font-bold text-lg text-black dark:text-white">Distribute Discount Voucher</h3>
+        <button type="button" onclick="closeModal('modal-voucher')" class="w-8 h-8 rounded-full bg-white dark:bg-[#1A1A1A] text-slate-500 dark:text-slate-400 flex items-center justify-center">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
       <form id="form-voucher" onsubmit="saveVoucher(event)" class="space-y-3 text-xs font-semibold">
+        <input type="hidden" id="vouch-doc-id">
         <div>
           <label class="block mb-1 text-slate-600 dark:text-slate-400">Partner Store</label>
           <select id="vouch-store-select" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
@@ -741,10 +742,14 @@
           <label class="block mb-1 text-slate-600 dark:text-slate-400">Description</label>
           <textarea id="vouch-desc" rows="2" placeholder="Description of voucher terms" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none"></textarea>
         </div>
+        <div>
+          <label class="block mb-1 text-slate-600 dark:text-slate-400">Max Usages per Student</label>
+          <input type="number" id="vouch-max-usages" required value="1" min="1" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
+        </div>
 
         <div class="flex justify-end gap-2 border-t border-slate-200 dark:border-neutral-800 pt-4 mt-4">
           <button type="button" onclick="closeModal('modal-voucher')" class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 bg-white dark:bg-[#1A1A1A]">Cancel</button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-pup-gold text-black dark:text-white font-bold shadow">Distribute Voucher</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-pup-gold text-black dark:text-white font-bold shadow">Save Voucher</button>
         </div>
       </form>
     </div>
@@ -953,7 +958,7 @@
 
         if (!tokenClient) {
             tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: '18210581530-30tf1vcgcvc8o34uqmkq26rpl48sbe2g.apps.googleusercontent.com',
+                client_id: '464926241291-buato49j1obe1ol56hh8hctpb7jks6ui.apps.googleusercontent.com',
                 scope: 'https://www.googleapis.com/auth/drive.file',
                 callback: callback,
             });
@@ -1096,7 +1101,7 @@
       
       let options = '<option value="">Select a Partner Store...</option>';
       window.appState.stores.forEach(s => {
-        options += `<option value="${s.docId}" data-pin="${s.pin}">${s.name}</option>`;
+        options += `<option value="${s.docId}" data-pin="${s.pin}">${s.businessName || s.name}</option>`;
       });
 
       if (partnerSel) partnerSel.innerHTML = options;
