@@ -42,54 +42,45 @@
     /* ID PASS CARD EXACT REPLICA DESIGN (IMAGE 3) */
     .id-pass-wrapper {
       width: 100%;
-      overflow: hidden;
+      container-type: inline-size;
       display: flex;
       justify-content: center;
       padding-bottom: 1rem;
     }
     
-    @media (min-width: 1050px) {
-      .id-pass-wrapper { justify-content: center; }
+    .id-pass-scale-box {
+      width: 100%;
+      aspect-ratio: 1013 / 638;
+      position: relative;
+      max-width: 1013px;
     }
     
     .id-pass-card {
-      min-width: 1013px;
       width: 1013px;
       height: 638px;
       background: #FFFFFF !important;
-      
       border-radius: 40px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
       color: #000000;
-      position: relative;
+      position: absolute;
+      top: 0;
+      left: 0;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       box-sizing: border-box;
-      margin: 0 auto;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      transform-origin: top center;
+      transform-origin: top left;
+      /* Dynamic scaling to fit the container perfectly */
+      transform: scale(calc(100cqw / 1013));
     }
     
-    /* Responsive scaling for mobile preview inside modal */
-    .id-pass-card {
-      transform: scale(0.68); 
-      margin-bottom: -204px;
-      margin-left: -162px;
-      margin-right: -162px;
-    }
-    @media (max-width: 800px) {
-      .id-pass-card { transform: scale(0.55); margin-bottom: -287px; margin-left: -227px; margin-right: -227px; }
-    }
-    @media (max-width: 600px) {
-      .id-pass-card { transform: scale(0.40); margin-bottom: -382px; margin-left: -303px; margin-right: -303px; }
-    }
-    @media (max-width: 450px) {
-      .id-pass-card { transform: scale(0.30); margin-bottom: -446px; margin-left: -354px; margin-right: -354px; }
-    }
-    @media (max-width: 380px) {
-      .id-pass-card { transform: scale(0.26); margin-bottom: -472px; margin-left: -374px; margin-right: -374px; }
+    /* Ensure it doesn't scale up beyond its original size */
+    @container (min-width: 1013px) {
+      .id-pass-card {
+        transform: scale(1);
+      }
     }
     
     .id-pass-header-banner {
@@ -347,7 +338,7 @@
           </button>
 
           <!-- Settings Button -->
-          <button onclick="openModal('modal-settings')" class="w-9 h-9 rounded-xl bg-neutral-900/80 hover:bg-neutral-800 dark:hover:bg-slate-700 border border-neutral-700 text-yellow-300 flex items-center justify-center transition" title="Settings & DB Status">
+          <button onclick="openModal('modal-settings')" class="w-9 h-9 rounded-xl bg-neutral-900/80 hover:bg-neutral-800 dark:hover:bg-slate-700 border border-neutral-700 text-yellow-300 flex items-center justify-center transition admin-only" title="Settings & DB Status">
             <i class="fa-solid fa-gear"></i>
           </button>
 
@@ -393,7 +384,7 @@
 
       <!-- Stats Metric Cards (Top Overview) -->
       <div id="stats-overview" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm flex items-center gap-4">
+        <div class="admin-only bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm flex items-center gap-4">
           <div class="w-12 h-12 rounded-2xl bg-orange-100 text-black dark:text-white flex items-center justify-center text-xl font-bold">
             <i class="fa-solid fa-graduation-cap"></i>
           </div>
@@ -403,7 +394,7 @@
           </div>
         </div>
 
-        <div class="bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm flex items-center gap-4">
+        <div class="admin-only bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm flex items-center gap-4">
           <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl font-bold">
             <i class="fa-solid fa-user-check"></i>
           </div>
@@ -413,7 +404,7 @@
           </div>
         </div>
 
-        <div class="bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm flex items-center gap-4">
+        <div class="admin-only bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm flex items-center gap-4">
           <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl font-bold">
             <i class="fa-solid fa-store"></i>
           </div>
@@ -577,7 +568,8 @@
 
       <!-- EXACT REPLICA ID PASS CARD MATCHING REFERENCE IMAGE 3 -->
       <div class="id-pass-wrapper custom-scrollbar">
-        <div id="printable-id-card" class="id-pass-card">
+        <div class="id-pass-scale-box">
+          <div id="printable-id-card" class="id-pass-card">
         
         <!-- Header Banner -->
         <div class="id-pass-header-banner">
@@ -621,7 +613,7 @@
               <canvas id="pass-card-qr" class="w-36 h-36"></canvas>
               <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div class="bg-white p-1 flex items-center justify-center" style="width: 28%; height: 28%;">
-                  <img src="assets/jmap_kappa.png" alt="JMAP Kappa" class="w-full h-full object-contain" />
+                  <img src="jmap_kappa.png" alt="JMAP Kappa" class="w-full h-full object-contain" />
                 </div>
               </div>
             </div>
@@ -633,6 +625,7 @@
         <div class="id-pass-footer">
           Junior Marketing Association of the Philippines - PUP Santa Rosa
         </div>
+          </div>
         </div>
       </div>
 
@@ -909,18 +902,30 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
             
             try {
-                const origTransform = card.style.transform;
                 card.style.transform = 'scale(1)';
                 card.style.margin = '0';
+                card.style.marginBottom = '0';
+                card.style.marginLeft = '0';
+                card.style.marginRight = '0';
+                card.style.width = '1013px';
+                card.style.height = '638px';
                 
                 const canvas = await html2canvas(card, {
                     scale: 2,
                     useCORS: true,
                     width: 1013,
-                    height: 638
+                    height: 638,
+                    backgroundColor: '#ffffff'
                 });
                 
-                card.style.transform = origTransform;
+                card.style.transform = '';
+                card.style.margin = '';
+                card.style.marginBottom = '';
+                card.style.marginLeft = '';
+                card.style.marginRight = '';
+                card.style.width = '';
+                card.style.height = '';
+                
                 const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
                 const blob = dataURLtoBlob(dataUrl);
                 
@@ -991,8 +996,12 @@
             const origTransform = card.style.transform;
             const origMargin = card.style.margin;
             
+            // Remove CSS classes temporarily so inline styles don't conflict, or just remove inline styles after
             card.style.transform = 'scale(1)';
             card.style.margin = '0';
+            card.style.marginBottom = '0';
+            card.style.marginLeft = '0';
+            card.style.marginRight = '0';
             card.style.width = '1013px';
             card.style.height = '638px';
             
@@ -1004,8 +1013,14 @@
                 backgroundColor: '#ffffff'
             });
             
-            card.style.transform = origTransform;
-            card.style.margin = origMargin;
+            card.style.transform = '';
+            card.style.margin = '';
+            card.style.marginBottom = '';
+            card.style.marginLeft = '';
+            card.style.marginRight = '';
+            card.style.width = '';
+            card.style.height = '';
+            
             const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
             const link = document.createElement('a');
             link.download = filename;
@@ -1194,7 +1209,8 @@
 
       document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
       document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.className = "nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-pup-gold";
+        btn.classList.remove('text-black', 'dark:text-white', 'bg-white', 'dark:bg-[#1A1A1A]', 'font-extrabold', 'shadow-sm');
+        btn.classList.add('text-slate-500', 'dark:text-slate-400', 'hover:text-black', 'dark:hover:text-pup-gold');
       });
 
       const targetView = document.getElementById(`view-${tab}`);
@@ -1202,7 +1218,8 @@
       
       if (targetView) targetView.classList.remove('hidden');
       if (targetBtn) {
-        targetBtn.className = "nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-black dark:text-white bg-white dark:bg-[#1A1A1A] font-extrabold shadow-sm";
+        targetBtn.classList.remove('text-slate-500', 'dark:text-slate-400', 'hover:text-black', 'dark:hover:text-pup-gold');
+        targetBtn.classList.add('text-black', 'dark:text-white', 'bg-white', 'dark:bg-[#1A1A1A]', 'font-extrabold', 'shadow-sm');
       }
 
       if (tab === 'roster') renderRoster();
