@@ -42,9 +42,9 @@
     /* ID PASS CARD EXACT REPLICA DESIGN (IMAGE 3) */
     .id-pass-wrapper {
       width: 100%;
-      overflow-x: auto;
+      overflow: hidden;
       display: flex;
-      justify-content: flex-start;
+      justify-content: center;
       padding-bottom: 1rem;
     }
     
@@ -56,6 +56,7 @@
       min-width: 1013px;
       width: 1013px;
       height: 638px;
+      background: #FFFFFF !important;
       
       border-radius: 40px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
@@ -68,7 +69,7 @@
       box-sizing: border-box;
       margin: 0 auto;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      transform-origin: top left;
+      transform-origin: top center;
     }
     
     /* Responsive scaling for mobile preview */
@@ -359,7 +360,7 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex space-x-1 sm:space-x-4 overflow-x-auto py-2 text-xs sm:text-sm font-bold no-scrollbar">
           
-          <button onclick="switchTab('roster')" id="nav-tab-roster" class="nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-black dark:text-white bg-white dark:bg-[#1A1A1A]">
+          <button onclick="switchTab('roster')" id="nav-tab-roster" class="nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-black dark:text-white bg-white dark:bg-[#1A1A1A] admin-only">
             <i class="fa-solid fa-users text-base"></i> Student Directory
           </button>
 
@@ -367,7 +368,7 @@
             <i class="fa-solid fa-qrcode text-base"></i> Web Camera Scanner
           </button>
 
-          <button onclick="switchTab('scans')" id="nav-tab-scans" class="nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-pup-gold admin-only">
+          <button onclick="switchTab('scans')" id="nav-tab-scans" class="nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-pup-gold">
             <i class="fa-solid fa-list-check text-base"></i> Live Scan Logs
           </button>
 
@@ -375,7 +376,7 @@
             <i class="fa-solid fa-store text-base"></i> Partner Stores
           </button>
 
-          <button onclick="switchTab('vouchers')" id="nav-tab-vouchers" class="nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-pup-gold admin-only">
+          <button onclick="switchTab('vouchers')" id="nav-tab-vouchers" class="nav-btn px-4 py-2.5 rounded-xl flex items-center gap-2 transition text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-pup-gold">
             <i class="fa-solid fa-ticket text-base"></i> Discount Vouchers
           </button>
 
@@ -436,7 +437,7 @@
 
 
       <!-- TAB 1: STUDENT DIRECTORY (ROSTER) -->
-      <section id="view-roster" class="tab-view space-y-4">
+      <section id="view-roster" class="tab-view space-y-4 admin-only">
         
         <!-- Action Header -->
         <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm">
@@ -493,7 +494,7 @@
 
 
       <!-- TAB 3: LIVE SCAN LOGS -->
-      <section id="view-scans" class="tab-view hidden space-y-4 admin-only">
+      <section id="view-scans" class="tab-view hidden space-y-4">
         <div class="bg-white dark:bg-[#1A1A1A] rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm overflow-hidden">
           <div class="p-4 bg-slate-50 dark:bg-[#222222] border-b border-slate-200 dark:border-neutral-800 font-bold text-sm text-slate-700 dark:text-slate-300 flex justify-between items-center">
             <span><i class="fa-solid fa-bolt text-pup-gold mr-2"></i> Real-time Entrance & Store Scan History</span>
@@ -537,12 +538,12 @@
 
 
       <!-- TAB 5: DISCOUNT VOUCHERS -->
-      <section id="view-vouchers" class="tab-view hidden space-y-4 admin-only">
+      <section id="view-vouchers" class="tab-view hidden space-y-4">
         <div class="flex justify-between items-center bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm">
           <h2 class="font-bold text-base text-black dark:text-white flex items-center gap-2">
             <i class="fa-solid fa-ticket"></i> Active Discount Vouchers
           </h2>
-          <button onclick="openVoucherModal()" class="px-4 py-2 rounded-xl bg-pup-gold hover:bg-yellow-500 text-black dark:text-white font-bold text-xs shadow transition flex items-center gap-2">
+          <button onclick="openVoucherModal()" class="admin-only px-4 py-2 rounded-xl bg-pup-gold hover:bg-yellow-500 text-black dark:text-white font-bold text-xs shadow transition flex items-center gap-2">
             <i class="fa-solid fa-plus"></i> Add Discount Voucher
           </button>
         </div>
@@ -616,7 +617,7 @@
               <canvas id="pass-card-qr" class="w-36 h-36"></canvas>
               <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div class="bg-white p-1 flex items-center justify-center" style="width: 28%; height: 28%;">
-                  <img src="assets/jmap_kappa.png" alt="JMAP Kappa" class="w-full h-full object-contain" />
+                  <img src="../assets/jmap_kappa.png" alt="JMAP Kappa" class="w-full h-full object-contain" />
                 </div>
               </div>
             </div>
@@ -1194,7 +1195,10 @@
     function updateStats() {
       const students = window.appState.students;
       const stores = window.appState.stores;
-      const logs = window.appState.scanLogs;
+      let logs = window.appState.scanLogs;
+      if (window.appState.userRole === 'partner' && window.appState.partnerData) {
+        logs = logs.filter(l => l.partnerId === window.appState.partnerData.id);
+      }
 
       document.getElementById('stat-total-students').innerText = students.length;
       document.getElementById('stat-paid-students').innerText = students.filter(s => s.isMembershipPaid).length;
@@ -1236,7 +1240,7 @@
             <div>
               <div class="flex justify-between items-start gap-2 mb-2">
                 <div>
-                  <h3 class="font-extrabold text-base text-slate-900">${s.fullName || 'N/A'}</h3>
+                  <h3 class="font-extrabold text-base text-black dark:text-orange-500">${s.fullName || 'N/A'}</h3>
                   <p class="font-mono text-xs font-bold text-black dark:text-white">${s.studentId || s.docId}</p>
                 </div>
                 ${statusBadge}
@@ -1378,7 +1382,9 @@
           department: student ? student.department : "N/A",
           status: status,
           scannedAt: Date.now(),
-          notes: notes
+          notes: notes,
+          partnerId: window.appState.userRole === 'partner' ? window.appState.partnerData.id : null,
+          partnerName: window.appState.userRole === 'partner' ? window.appState.partnerData.name : 'Admin'
         });
 
       } catch(err) {
@@ -1389,7 +1395,10 @@
 
     function renderScanLogs() {
       const container = document.getElementById('scan-logs-table');
-      const logs = window.appState.scanLogs;
+      let logs = window.appState.scanLogs;
+      if (window.appState.userRole === 'partner' && window.appState.partnerData) {
+        logs = logs.filter(l => l.partnerId === window.appState.partnerData.id);
+      }
 
       if (logs.length === 0) {
         container.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400 dark:text-slate-500">No scans logged yet.</td></tr>`;
@@ -1441,7 +1450,10 @@
 
     function renderVouchers() {
       const container = document.getElementById('vouchers-grid');
-      const vouchers = window.appState.vouchers;
+      let vouchers = window.appState.vouchers;
+      if (window.appState.userRole === 'partner' && window.appState.partnerData) {
+        vouchers = vouchers.filter(v => v.partnerId === window.appState.partnerData.id);
+      }
 
       if (vouchers.length === 0) {
         container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 dark:text-slate-500">No vouchers added yet.</div>`;
@@ -1456,7 +1468,7 @@
             <p class="text-xs font-bold text-black dark:text-white mb-1">${v.partnerName || 'Partner Store'}</p>
             <p class="text-xs text-slate-500 dark:text-slate-400">${v.description || ''}</p>
           </div>
-          <button onclick="deleteVoucher('${v.docId}')" class="p-2 text-orange-500 hover:bg-orange-50 dark:hover:bg-neutral-900/40 rounded-xl transition">
+          <button onclick="deleteVoucher('${v.docId}')" class="admin-only p-2 text-orange-500 hover:bg-orange-50 dark:hover:bg-neutral-900/40 rounded-xl transition">
             <i class="fa-solid fa-trash text-sm"></i>
           </button>
         </div>
