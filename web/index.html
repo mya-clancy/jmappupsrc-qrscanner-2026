@@ -1250,7 +1250,10 @@
       }
 
       // Find the store by username (saved in the name field)
-      const store = window.appState.stores.find(s => (s.name || "").toLowerCase() === usernameInput.toLowerCase());
+      const store = (window.appState.stores || []).find(s => 
+        (s.name && s.name.toLowerCase() === usernameInput.toLowerCase()) || 
+        (s.businessName && s.businessName.toLowerCase() === usernameInput.toLowerCase())
+      );
       
       if (!store) {
         err.innerText = "Username not found";
@@ -1281,12 +1284,14 @@
       window.appState.partnerData = null;
       document.getElementById('screen-main').classList.add('jmap-hidden');
       document.getElementById('screen-login').classList.remove('hidden', 'jmap-hidden');
-      document.getElementById('admin-user').value = '';
-      document.getElementById('admin-pass').value = '';
-      document.getElementById('partner-pin').value = '';
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear();
-        html5QrcodeScanner = null;
+      const adminUser = document.getElementById('admin-user');
+      const adminPass = document.getElementById('admin-pass');
+      const partnerPin = document.getElementById('partner-pin');
+      if (adminUser) adminUser.value = '';
+      if (adminPass) adminPass.value = '';
+      if (partnerPin) partnerPin.value = '';
+      if (typeof stopScanning === 'function') {
+        stopScanning();
       }
     }
 
@@ -1340,17 +1345,26 @@
     }
 
     function updateStats() {
-      const students = window.appState.students;
-      const stores = window.appState.stores;
-      let logs = window.appState.scanLogs;
+      const students = window.appState.students || [];
+      const stores = window.appState.stores || [];
+      let logs = window.appState.scanLogs || [];
       if (window.appState.userRole === 'partner' && window.appState.partnerData) {
         logs = logs.filter(l => l.partnerId === window.appState.partnerData.id);
       }
 
-      document.getElementById('stat-total-students').innerText = students.length;
-      document.getElementById('stat-paid-students').innerText = students.filter(s => s.isMembershipPaid).length;
-      document.getElementById('stat-total-stores').innerText = stores.length;
-      document.getElementById('stat-total-scans').innerText = logs.length;
+      const totalStudentsEl = document.getElementById('stat-total-students');
+      if (totalStudentsEl) totalStudentsEl.innerText = students.length;
+
+      const paidStudentsEl = document.getElementById('stat-paid-students');
+      if (paidStudentsEl) {
+        paidStudentsEl.innerText = students.filter(s => s.isMembershipPaid && !s.isExpired && s.membershipStatus !== 'EXPIRED').length;
+      }
+
+      const totalStoresEl = document.getElementById('stat-total-stores');
+      if (totalStoresEl) totalStoresEl.innerText = stores.length;
+
+      const totalScansEl = document.getElementById('stat-total-scans');
+      if (totalScansEl) totalScansEl.innerText = logs.length;
     }
 
     // Date and Time Formatting Helpers
@@ -2107,8 +2121,7 @@
         `"${(l.notes || '').replace(/"/g, '""')}"`
       ]);
 
-      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(r => r.join(','))].join('
-');
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join(String.fromCharCode(10));
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       const filename = dateFilterVal 
