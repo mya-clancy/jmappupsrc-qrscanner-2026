@@ -261,7 +261,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Auth methods
     fun loginAdmin(user: String, pass: String): Boolean {
-        if (user.trim() == "admin" && pass.trim() == "jmapup") {
+        if (user.trim() == "jmapadmin" && pass.trim() == "AWvu72NEdUqVg5Kq") {
             _authMode.value = AuthMode.ADMIN
             _loggedInPartnerBusiness.value = null
             return true

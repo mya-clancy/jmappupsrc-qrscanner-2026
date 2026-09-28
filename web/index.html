@@ -439,6 +439,12 @@
               <option value="PENDING">Pending Only</option>
             </select>
 
+            <button onclick="expireAllMemberships()" class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow transition flex items-center justify-center gap-1.5 whitespace-nowrap" title="Expire all memberships & disable all QRs without deleting QR data">
+              <i class="fa-solid fa-ban"></i> Expire All
+            </button>
+            <button onclick="activateAllMemberships()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition flex items-center justify-center gap-1.5 whitespace-nowrap" title="Activate all memberships">
+              <i class="fa-solid fa-check-double"></i> Activate All
+            </button>
             <button onclick="openStudentModal()" class="px-4 py-2 rounded-xl bg-black hover:bg-neutral-800 text-white font-bold text-xs shadow transition flex items-center justify-center gap-2 whitespace-nowrap">
               <i class="fa-solid fa-user-plus"></i> Add Student
             </button>
@@ -456,48 +462,134 @@
       <section id="view-scanner" class="tab-view hidden max-w-2xl mx-auto space-y-4">
         <div class="bg-white dark:bg-[#1A1A1A] p-6 rounded-3xl border border-slate-200 dark:border-neutral-800 shadow-md text-center">
           
-          <div class="flex justify-between items-center mb-4">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
             <h2 class="font-extrabold text-lg text-black dark:text-white flex items-center gap-2">
               <i class="fa-solid fa-camera"></i> Live QR Camera Validation
             </h2>
-            <button onclick="resetScanner()" class="px-3 py-1 rounded-full bg-white dark:bg-[#1A1A1A] text-slate-600 dark:text-slate-400 text-xs font-bold hover:bg-slate-200 dark:bg-[#333333] transition">
-              <i class="fa-solid fa-rotate-right mr-1"></i> Reset
-            </button>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button onclick="resetScanner()" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-200 transition flex items-center gap-1">
+                <i class="fa-solid fa-rotate-right"></i> Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- Camera Selector for PC and Mobile -->
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-[#222222] rounded-2xl border border-slate-200 dark:border-neutral-800 text-xs">
+            <div class="flex items-center gap-1.5 flex-1 min-w-[200px]">
+              <i class="fa-solid fa-video text-pup-gold"></i>
+              <select id="camera-select" onchange="onCameraChange()" class="w-full bg-white dark:bg-[#1A1A1A] border border-slate-300 dark:border-neutral-700 rounded-xl px-2.5 py-1.5 font-semibold text-xs focus:outline-none">
+                <option value="">Detecting cameras...</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="px-3 py-1.5 bg-pup-gold/20 hover:bg-pup-gold/30 text-amber-900 dark:text-pup-gold font-bold rounded-xl cursor-pointer transition flex items-center gap-1">
+                <i class="fa-solid fa-file-image"></i> Scan Image
+                <input type="file" accept="image/*" onchange="scanQRImageFile(event)" class="hidden">
+              </label>
+            </div>
           </div>
 
           <!-- Camera Stream Container -->
-          <div id="reader" class="w-full bg-black rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-neutral-700 shadow-inner min-h-[300px]"></div>
+          <div id="reader-container" class="relative">
+            <div id="reader" class="w-full bg-black rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-neutral-700 shadow-inner min-h-[300px]"></div>
+            <div id="camera-status-msg" class="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">Initializing scanner...</div>
+          </div>
+
+          <!-- Manual ID Entry Fallback -->
+          <form onsubmit="handleManualVerify(event)" class="mt-4 pt-3 border-t border-slate-200 dark:border-neutral-800 flex gap-2">
+            <input type="text" id="manual-student-id" placeholder="Or enter Student ID manually (e.g. 2026-43139-SR-0)" class="flex-1 px-4 py-2 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-xs font-mono focus:outline-none">
+            <button type="submit" class="px-4 py-2 rounded-xl bg-black dark:bg-pup-gold text-white dark:text-black font-extrabold text-xs shadow transition">
+              Verify
+            </button>
+          </form>
 
           <!-- Scan Result Display -->
           <div id="scan-result" class="hidden mt-6 p-6 rounded-2xl border-2 text-center animate-fade-in transition-all">
             <div id="scan-badge" class="inline-block px-5 py-1.5 rounded-full text-sm font-extrabold mb-3"></div>
             <h3 id="scan-name" class="text-2xl font-black text-slate-800 dark:text-slate-200"></h3>
             <p id="scan-id" class="text-black dark:text-white font-mono font-bold text-sm mt-1"></p>
-            <p id="scan-sem" class="text-slate-500 dark:text-slate-400 text-xs mt-2"></p>
+            <p id="scan-dept" class="text-slate-600 dark:text-slate-400 text-xs mt-1 font-semibold"></p>
+            <p id="scan-sem" class="text-slate-500 dark:text-slate-400 text-xs mt-0.5"></p>
+            
+            <div id="scan-warning-msg" class="hidden mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 text-xs font-bold"></div>
+
+            <!-- Voucher Redemption Section (Turn 4 & Turn 8 feature) -->
+            <div id="scan-vouchers-section" class="mt-6 pt-5 border-t border-slate-200 dark:border-neutral-700 text-left">
+              <div class="flex justify-between items-center mb-3">
+                <h4 class="font-extrabold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <i class="fa-solid fa-ticket text-pup-gold"></i> Available Vouchers to Redeem
+                </h4>
+                <span id="scan-vouchers-subtitle" class="text-[11px] font-semibold text-slate-400"></span>
+              </div>
+              <div id="scan-vouchers-list" class="space-y-2.5">
+                <!-- Dynamically populated vouchers for student -->
+              </div>
+            </div>
+
+            <div class="mt-6 flex justify-center">
+              <button onclick="resetScanner()" class="px-5 py-2.5 rounded-xl bg-black dark:bg-pup-gold text-white dark:text-black font-extrabold text-xs shadow transition flex items-center gap-2">
+                <i class="fa-solid fa-qrcode"></i> Ready for Next Scan
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
 
-      <!-- TAB 3: LIVE SCAN LOGS -->
+      <!-- TAB 3: LIVE SCAN LOGS & VOUCHER REDEMPTION LOGS -->
       <section id="view-scans" class="tab-view hidden space-y-4">
         <div class="bg-white dark:bg-[#1A1A1A] rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm overflow-hidden">
-          <div class="p-4 bg-slate-50 dark:bg-[#222222] border-b border-slate-200 dark:border-neutral-800 font-bold text-sm text-slate-700 dark:text-slate-300 flex justify-between items-center">
-            <span><i class="fa-solid fa-bolt text-pup-gold mr-2"></i> Real-time Entrance & Store Scan History</span>
-            <span class="text-xs font-normal text-slate-400 dark:text-slate-500">Auto-updates live</span>
+          
+          <div class="p-4 bg-slate-50 dark:bg-[#222222] border-b border-slate-200 dark:border-neutral-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <h3 id="logs-title" class="font-extrabold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-pup-gold"></i> Live Scan & Redemption Logs
+              </h3>
+              <p id="logs-subtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Real-time scan verification and voucher tracking</p>
+            </div>
+
+            <!-- Toolbar Controls: Date Filter, Sort, Download CSV -->
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex items-center gap-1.5 bg-white dark:bg-[#1A1A1A] px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-neutral-700 text-xs">
+                <label for="filter-log-date" class="font-bold text-slate-600 dark:text-slate-400 whitespace-nowrap"><i class="fa-regular fa-calendar mr-1"></i>Date:</label>
+                <input type="date" id="filter-log-date" onchange="renderScanLogs()" class="bg-transparent font-medium text-xs focus:outline-none text-slate-800 dark:text-slate-200">
+                <button onclick="clearLogDateFilter()" title="Clear Date Filter" class="text-slate-400 hover:text-slate-600 ml-1 text-xs">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              <button onclick="toggleLogSortOrder()" id="btn-log-sort" class="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1A1A1A] border border-slate-300 dark:border-neutral-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs transition flex items-center gap-1">
+                <i class="fa-solid fa-arrow-down-wide-short"></i> <span id="sort-order-label">Newest First</span>
+              </button>
+
+              <button onclick="downloadScanLogsCSV()" class="px-3.5 py-1.5 rounded-xl bg-black dark:bg-pup-gold hover:bg-neutral-800 dark:hover:bg-yellow-500 text-white dark:text-black font-extrabold text-xs shadow transition flex items-center gap-1.5 whitespace-nowrap">
+                <i class="fa-solid fa-file-arrow-down"></i> Download CSV
+              </button>
+            </div>
           </div>
+
+          <div class="p-3 bg-white dark:bg-[#1A1A1A] border-b border-slate-100 dark:border-neutral-800 flex items-center justify-between gap-3 text-xs">
+            <div class="relative flex-1 max-w-md">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400"></i>
+              <input type="text" id="filter-log-search" oninput="renderScanLogs()" placeholder="Search student name, ID, partner, or voucher..." class="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-[#222222] text-xs focus:outline-none">
+            </div>
+            <div id="logs-counter" class="text-slate-400 font-semibold text-xs whitespace-nowrap"></div>
+          </div>
+
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
               <thead>
-                <tr class="bg-white dark:bg-[#1A1A1A] text-slate-500 dark:text-slate-400 uppercase font-bold border-b border-slate-200 dark:border-neutral-800">
+                <tr class="bg-slate-50 dark:bg-[#222222] text-slate-500 dark:text-slate-400 uppercase font-bold border-b border-slate-200 dark:border-neutral-800">
+                  <th class="py-3 px-4">Date (MM/DD/YYYY)</th>
                   <th class="py-3 px-4">Time</th>
                   <th class="py-3 px-4">Student Name</th>
                   <th class="py-3 px-4">Student ID</th>
                   <th class="py-3 px-4">Status</th>
-                  <th class="py-3 px-4">Notes</th>
+                  <th class="py-3 px-4">Location / Partner</th>
+                  <th class="py-3 px-4">Scan / Voucher Note</th>
                 </tr>
               </thead>
-              <tbody id="scan-logs-table" class="divide-y divide-slate-100 text-slate-700 dark:text-slate-300">
+              <tbody id="scan-logs-table" class="divide-y divide-slate-100 dark:divide-neutral-800 text-slate-700 dark:text-slate-300">
                 <!-- Dynamic logs -->
               </tbody>
             </table>
@@ -682,7 +774,7 @@
   </div>
 
 
-  <!-- ==================== ADD STORE MODAL ==================== -->
+  <!-- ==================== ADD / EDIT STORE MODAL ==================== -->
   <div id="modal-store" class="fixed inset-0 z-50 hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white dark:bg-[#1A1A1A] max-w-md w-full rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 space-y-4">
       <div class="flex justify-between items-center border-b border-slate-200 dark:border-neutral-800 pb-3">
@@ -695,12 +787,16 @@
       <form id="form-store" onsubmit="saveStore(event)" class="space-y-3 text-xs font-semibold">
         <input type="hidden" id="store-doc-id">
         <div>
-          <label class="block mb-1 text-slate-600 dark:text-slate-400">Store Username</label>
-          <input type="text" id="store-name" required value="" placeholder="Partner Username" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
+          <label class="block mb-1 text-slate-600 dark:text-slate-400">Business Name (Display Name)</label>
+          <input type="text" id="store-biz-name" required value="" placeholder="e.g. Cha Tuk Chak Milk Tea" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-600 dark:text-slate-400">Store Username (For Cashier Login)</label>
+          <input type="text" id="store-name" required value="" placeholder="e.g. chatukchak" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
         </div>
         <div>
           <label class="block mb-1 text-slate-600 dark:text-slate-400">Category</label>
-          <input type="text" id="store-cat" value="" placeholder="Food & Beverage" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
+          <input type="text" id="store-cat" value="" placeholder="Food & Beverage / Services" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
         </div>
         <div>
           <label class="block mb-1 text-slate-600 dark:text-slate-400">4-Digit Access PIN</label>
@@ -709,18 +805,18 @@
 
         <div class="flex justify-end gap-2 border-t border-slate-200 dark:border-neutral-800 pt-4 mt-4">
           <button type="button" onclick="closeModal('modal-store')" class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 bg-white dark:bg-[#1A1A1A]">Cancel</button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-black text-white font-bold shadow">Save Store</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-black dark:bg-pup-gold text-white dark:text-black font-bold shadow">Save Store</button>
         </div>
       </form>
     </div>
   </div>
 
 
-  <!-- ==================== ADD VOUCHER MODAL ==================== -->
+  <!-- ==================== ADD / EDIT VOUCHER MODAL ==================== -->
   <div id="modal-voucher" class="fixed inset-0 z-50 jmap-hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white dark:bg-[#1A1A1A] max-w-md w-full rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-neutral-800 space-y-4">
       <div class="flex justify-between items-center border-b border-slate-200 dark:border-neutral-800 pb-3">
-        <h3 id="voucher-modal-title" class="font-bold text-lg text-black dark:text-white">Distribute Discount Voucher</h3>
+        <h3 id="voucher-modal-title" class="font-bold text-lg text-black dark:text-white">Configure Discount Voucher</h3>
         <button type="button" onclick="closeModal('modal-voucher')" class="w-8 h-8 rounded-full bg-white dark:bg-[#1A1A1A] text-slate-500 dark:text-slate-400 flex items-center justify-center">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -736,20 +832,26 @@
         </div>
         <div>
           <label class="block mb-1 text-slate-600 dark:text-slate-400">Discount Title</label>
-          <input type="text" id="vouch-title" required value="" placeholder="e.g. 10% Off All Orders" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
+          <input type="text" id="vouch-title" required value="" placeholder="e.g. 10% Off All Items" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
         </div>
         <div>
-          <label class="block mb-1 text-slate-600 dark:text-slate-400">Description</label>
-          <textarea id="vouch-desc" rows="2" placeholder="Description of voucher terms" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none"></textarea>
+          <label class="block mb-1 text-slate-600 dark:text-slate-400">Description & Terms</label>
+          <textarea id="vouch-desc" rows="2" placeholder="e.g. Valid on all beverages. Present ID upon order." class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none"></textarea>
         </div>
-        <div>
-          <label class="block mb-1 text-slate-600 dark:text-slate-400">Max Usages per Student</label>
-          <input type="number" id="vouch-max-usages" required value="1" min="1" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block mb-1 text-slate-600 dark:text-slate-400">Max Usage per Student</label>
+            <input type="number" id="vouch-max-usages" required value="1" min="1" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
+          </div>
+          <div>
+            <label class="block mb-1 text-slate-600 dark:text-slate-400">Expiry Date (Optional)</label>
+            <input type="date" id="vouch-expiry-date" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-[#222222] text-sm focus:outline-none">
+          </div>
         </div>
 
         <div class="flex justify-end gap-2 border-t border-slate-200 dark:border-neutral-800 pt-4 mt-4">
           <button type="button" onclick="closeModal('modal-voucher')" class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 bg-white dark:bg-[#1A1A1A]">Cancel</button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-pup-gold text-black dark:text-white font-bold shadow">Save Voucher</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-pup-gold text-black font-bold shadow">Save Voucher</button>
         </div>
       </form>
     </div>
@@ -834,6 +936,7 @@
       stores: [],
       vouchers: [],
       scanLogs: [],
+      redemptions: [],
       userRole: null,
       partnerData: null
     };
@@ -857,8 +960,15 @@
       if (window.activeTab === 'vouchers') renderVouchers();
     });
 
+    onSnapshot(collection(db, "voucher_redemptions"), snap => {
+      window.appState.redemptions = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+      if (window.activeScannedStudent) {
+        renderStudentVouchers(window.activeScannedStudent);
+      }
+    });
+
     onSnapshot(collection(db, "scan_logs"), snap => {
-      window.appState.scanLogs = snap.docs.map(d => ({ docId: d.id, ...d.data() })).sort((a,b) => (b.scannedAt || 0) - (a.scannedAt || 0));
+      window.appState.scanLogs = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
       updateStats();
       if (window.activeTab === 'scans') renderScanLogs();
     });
@@ -1114,7 +1224,7 @@
       const pass = document.getElementById('admin-pass').value.trim();
       const err = document.getElementById('admin-error');
 
-      if (user === 'admin' && pass === 'jmapup') {
+      if (user === 'jmapadmin' && pass === 'AWvu72NEdUqVg5Kq') {
         window.appState.userRole = 'admin';
         if (document.getElementById('admin-remember').checked) {
           localStorage.setItem('jmap_session_role', 'admin');
@@ -1243,15 +1353,62 @@
       document.getElementById('stat-total-scans').innerText = logs.length;
     }
 
+    // Date and Time Formatting Helpers
+    function formatMMDDYYYY(val) {
+      if (!val) return 'N/A';
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return val;
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${mm}/${dd}/${yyyy}`;
+    }
+
+    function formatTime12(val) {
+      if (!val) return 'N/A';
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Tab Navigation
+    function switchTab(tab) {
+      window.activeTab = tab;
+
+      document.querySelectorAll('.tab-view').forEach(el => el.classList.add('jmap-hidden'));
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-black', 'dark:text-white', 'bg-white', 'dark:bg-[#1A1A1A]', 'font-extrabold', 'shadow-sm');
+        btn.classList.add('text-slate-500', 'dark:text-slate-400', 'hover:text-black', 'dark:hover:text-pup-gold');
+      });
+
+      const targetView = document.getElementById(`view-${tab}`);
+      const targetBtn = document.getElementById(`nav-tab-${tab}`);
+      
+      if (targetView) targetView.classList.remove('hidden', 'jmap-hidden');
+      if (targetBtn) {
+        targetBtn.classList.remove('text-slate-500', 'dark:text-slate-400', 'hover:text-black', 'dark:hover:text-pup-gold');
+        targetBtn.classList.add('text-black', 'dark:text-white', 'bg-white', 'dark:bg-[#1A1A1A]', 'font-extrabold', 'shadow-sm');
+      }
+
+      if (tab === 'roster') renderRoster();
+      if (tab === 'scanner') initScanner();
+      else stopScanning();
+
+      if (tab === 'scans') renderScanLogs();
+      if (tab === 'stores') renderStores();
+      if (tab === 'vouchers') renderVouchers();
+    }
+
+    // ==================== TAB 1: STUDENT DIRECTORY ====================
     function renderRoster() {
       const container = document.getElementById('roster-grid');
-      const query = document.getElementById('search-roster').value.toLowerCase();
-      const paymentFilter = document.getElementById('filter-payment').value;
+      const query = (document.getElementById('search-roster')?.value || '').toLowerCase();
+      const paymentFilter = document.getElementById('filter-payment')?.value || 'ALL';
 
-      let list = window.appState.students;
+      let list = window.appState.students || [];
 
-      if (paymentFilter === 'PAID') list = list.filter(s => s.isMembershipPaid);
-      if (paymentFilter === 'PENDING') list = list.filter(s => !s.isMembershipPaid);
+      if (paymentFilter === 'PAID') list = list.filter(s => s.isMembershipPaid && !s.isExpired && s.membershipStatus !== 'EXPIRED');
+      if (paymentFilter === 'PENDING') list = list.filter(s => !s.isMembershipPaid || s.isExpired || s.membershipStatus === 'EXPIRED');
 
       if (query) {
         list = list.filter(s => 
@@ -1267,10 +1424,18 @@
       }
 
       container.innerHTML = list.map(s => {
-        const isPaid = s.isMembershipPaid;
-        const statusBadge = isPaid
-          ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700"><i class="fa-solid fa-check mr-1"></i> PAID</span>`
-          : `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-700"><i class="fa-solid fa-clock mr-1"></i> PENDING</span>`;
+        const isPaidAndActive = s.isMembershipPaid && !s.isExpired && s.membershipStatus !== 'EXPIRED';
+        const statusBadge = isPaidAndActive
+          ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"><i class="fa-solid fa-check mr-1"></i> ACTIVE / VALID</span>`
+          : `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800"><i class="fa-solid fa-ban mr-1"></i> EXPIRED / DISABLED</span>`;
+
+        const toggleBtn = isPaidAndActive
+          ? `<button onclick="toggleStudentStatus('${s.docId}', false)" class="px-2.5 py-2 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 rounded-xl text-xs font-bold transition flex items-center gap-1" title="Expire membership and disable QR">
+              <i class="fa-solid fa-toggle-on text-sm"></i> Expire
+             </button>`
+          : `<button onclick="toggleStudentStatus('${s.docId}', true)" class="px-2.5 py-2 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 rounded-xl text-xs font-bold transition flex items-center gap-1" title="Activate membership and enable QR">
+              <i class="fa-solid fa-toggle-off text-sm"></i> Activate
+             </button>`;
 
         return `
           <div class="bg-white dark:bg-[#1A1A1A] p-5 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition flex flex-col justify-between gap-4">
@@ -1286,20 +1451,94 @@
               <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">${s.activeSemester || '2026-2027 | 1st Semester'}</p>
             </div>
 
-            <div class="flex gap-2 border-t border-slate-100 pt-3">
-              <button onclick="viewMemberPass('${s.docId}')" class="flex-1 py-2 bg-pup-gold hover:bg-yellow-500 text-black dark:text-white font-extrabold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
+            <div class="flex items-center gap-1.5 border-t border-slate-100 dark:border-neutral-800 pt-3">
+              <button onclick="viewMemberPass('${s.docId}')" class="flex-1 py-2 bg-pup-gold hover:bg-yellow-500 text-black font-extrabold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
                 <i class="fa-solid fa-id-card"></i> Member Pass
               </button>
-              <button onclick="editStudent('${s.docId}')" class="px-3 py-2 bg-white dark:bg-[#1A1A1A] text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-200 dark:bg-[#333333] transition">
+              ${toggleBtn}
+              <button onclick="editStudent('${s.docId}')" class="p-2 bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 transition" title="Edit Student">
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
-              <button onclick="deleteStudent('${s.docId}')" class="px-3 py-2 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-100 transition">
+              <button onclick="deleteStudent('${s.docId}')" class="p-2 bg-orange-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-100 transition" title="Delete Student">
                 <i class="fa-solid fa-trash text-xs"></i>
               </button>
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    async function toggleStudentStatus(docId, activate) {
+      try {
+        const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        await setDoc(doc(window.db, "students", docId), {
+          isMembershipPaid: activate,
+          isExpired: !activate,
+          membershipStatus: activate ? 'ACTIVE' : 'EXPIRED',
+          updatedAt: Date.now()
+        }, { merge: true });
+      } catch(err) {
+        console.error("Error toggling student status:", err);
+        alert("Failed to update student status.");
+      }
+    }
+
+    async function expireAllMemberships() {
+      const students = window.appState.students || [];
+      if (students.length === 0) return alert("No student records found.");
+
+      if (!confirm(`Are you sure you want to expire all ${students.length} student memberships? All QR codes will be disabled simultaneously, but QR data will NOT be deleted so printed codes remain valid for re-activation.`)) {
+        return;
+      }
+
+      try {
+        const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        let updatedCount = 0;
+        for (const s of students) {
+          if (s.docId) {
+            await setDoc(doc(window.db, "students", s.docId), {
+              isMembershipPaid: false,
+              isExpired: true,
+              membershipStatus: 'EXPIRED',
+              updatedAt: Date.now()
+            }, { merge: true });
+            updatedCount++;
+          }
+        }
+        alert(`Successfully expired ${updatedCount} memberships. All student QR codes are now marked as EXPIRED.`);
+      } catch (err) {
+        console.error("Error expiring memberships:", err);
+        alert("Failed to expire all memberships: " + err.message);
+      }
+    }
+
+    async function activateAllMemberships() {
+      const students = window.appState.students || [];
+      if (students.length === 0) return alert("No student records found.");
+
+      if (!confirm(`Are you sure you want to activate all ${students.length} student memberships?`)) {
+        return;
+      }
+
+      try {
+        const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        let updatedCount = 0;
+        for (const s of students) {
+          if (s.docId) {
+            await setDoc(doc(window.db, "students", s.docId), {
+              isMembershipPaid: true,
+              isExpired: false,
+              membershipStatus: 'ACTIVE',
+              updatedAt: Date.now()
+            }, { merge: true });
+            updatedCount++;
+          }
+        }
+        alert(`Successfully activated ${updatedCount} memberships.`);
+      } catch (err) {
+        console.error("Error activating memberships:", err);
+        alert("Failed to activate all memberships: " + err.message);
+      }
     }
 
     function viewMemberPass(docId) {
@@ -1312,12 +1551,13 @@
       document.getElementById('pass-card-sem').innerText = student.activeSemester || '2026-2027 | 1st Semester';
 
       const badgeEl = document.getElementById('pass-card-badge');
-      if (student.isMembershipPaid) {
+      const isPaidAndActive = student.isMembershipPaid && !student.isExpired && student.membershipStatus !== 'EXPIRED';
+      if (isPaidAndActive) {
         badgeEl.className = "id-pass-badge";
         badgeEl.innerHTML = `<span id="pass-card-sem">${student.activeSemester || '2026-2027 | 1st Semester'}</span> • VALID MEMBER`;
       } else {
         badgeEl.className = "id-pass-badge pending";
-        badgeEl.innerHTML = `<span id="pass-card-sem">${student.activeSemester || '2026-2027 | 1st Semester'}</span> • PENDING DUES`;
+        badgeEl.innerHTML = `<span id="pass-card-sem">${student.activeSemester || '2026-2027 | 1st Semester'}</span> • MEMBERSHIP EXPIRED`;
       }
 
       const canvas = document.getElementById('pass-card-qr');
@@ -1331,9 +1571,6 @@
         });
       }
       qrGenerator.value = JSON.stringify({ studentId: student.studentId || student.docId });
-      
-
-
       openModal('modal-id-card');
     }
 
@@ -1351,20 +1588,127 @@
       }
     }
     window.addEventListener('resize', resizeIdPass);
-    
-    function initScanner() {
-      document.getElementById('scan-result').classList.add('hidden');
-      document.getElementById('reader').classList.remove('hidden');
 
-      if (!html5QrcodeScanner) {
-        html5QrcodeScanner = new Html5QrcodeScanner(
-          "reader",
-          { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
-          false
-        );
-        html5QrcodeScanner.render(onScanSuccess, () => {});
-      } else {
-        html5QrcodeScanner.resume();
+    // ==================== TAB 2: PC & MOBILE CAMERA SCANNER ====================
+    let html5QrCode = null;
+    let isScannerRunning = false;
+    let selectedCameraId = null;
+
+    async function initScanner() {
+      document.getElementById('scan-result').classList.add('hidden');
+      document.getElementById('reader-container').classList.remove('hidden');
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      // Enumerate available cameras (PC webcam, USB cameras, back/front cams)
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        const camSelect = document.getElementById('camera-select');
+        if (devices && devices.length > 0) {
+          camSelect.innerHTML = devices.map((d, i) => 
+            `<option value="${d.id}">${d.label || ('Camera ' + (i + 1))}</option>`
+          ).join('');
+          if (!selectedCameraId || !devices.some(d => d.id === selectedCameraId)) {
+            // Prefer back camera on mobile or default first camera on PC
+            const backCam = devices.find(d => /back|rear|environment/i.test(d.label));
+            selectedCameraId = backCam ? backCam.id : devices[0].id;
+          }
+          camSelect.value = selectedCameraId;
+        } else {
+          camSelect.innerHTML = `<option value="">Default PC / Mobile Camera</option>`;
+        }
+      } catch (e) {
+        console.warn("Could not enumerate cameras:", e);
+      }
+
+      startCameraStream();
+    }
+
+    async function onCameraChange() {
+      const sel = document.getElementById('camera-select');
+      if (sel && sel.value) {
+        selectedCameraId = sel.value;
+        await stopScanning();
+        await startCameraStream();
+      }
+    }
+
+    async function startCameraStream() {
+      const statusMsg = document.getElementById('camera-status-msg');
+      statusMsg.innerHTML = '<span class="text-slate-500 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Starting camera...</span>';
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      if (isScannerRunning) {
+        try {
+          await html5QrCode.stop();
+          isScannerRunning = false;
+        } catch(e){}
+      }
+
+      const scanConfig = {
+        fps: 10,
+        qrbox: (viewWidth, viewHeight) => {
+          const minEdge = Math.min(viewWidth, viewHeight);
+          const size = Math.max(180, Math.floor(minEdge * 0.72));
+          return { width: size, height: size };
+        }
+      };
+
+      try {
+        let cameraConfig = selectedCameraId 
+          ? { deviceId: { exact: selectedCameraId } }
+          : { facingMode: "environment" };
+
+        try {
+          await html5QrCode.start(
+            cameraConfig,
+            scanConfig,
+            (decodedText) => onScanSuccess(decodedText),
+            () => {} // ignore frame parse failures
+          );
+        } catch (firstErr) {
+          console.warn("First camera attempt failed (common on desktop PCs), retrying with available cameras:", firstErr);
+          // Fallback for PC webcams that don't support facingMode: "environment"
+          const devices = await Html5Qrcode.getCameras();
+          if (devices && devices.length > 0) {
+            selectedCameraId = devices[0].id;
+            await html5QrCode.start(
+              selectedCameraId,
+              scanConfig,
+              (decodedText) => onScanSuccess(decodedText),
+              () => {}
+            );
+          } else {
+            // Last fallback: generic user camera
+            await html5QrCode.start(
+              { facingMode: "user" },
+              scanConfig,
+              (decodedText) => onScanSuccess(decodedText),
+              () => {}
+            );
+          }
+        }
+
+        isScannerRunning = true;
+        statusMsg.innerHTML = '<span class="text-emerald-600 dark:text-emerald-400 font-bold"><i class="fa-solid fa-circle-dot mr-1 animate-pulse"></i> Camera active</span> — Center the QR code inside the box';
+      } catch (err) {
+        console.error("Camera startup failed:", err);
+        isScannerRunning = false;
+        statusMsg.innerHTML = `<span class="text-rose-600 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Camera unavailable:</span> ${err.message || 'Permission denied or webcam not detected.'}<br><span class="text-slate-400 text-[11px]">Use "Scan Image" or enter Student ID manually below.</span>`;
+      }
+    }
+
+    async function stopScanning() {
+      if (html5QrCode && isScannerRunning) {
+        try {
+          await html5QrCode.stop();
+          isScannerRunning = false;
+        } catch(e){}
       }
     }
 
@@ -1372,26 +1716,57 @@
       initScanner();
     }
 
-    async function onScanSuccess(decodedText) {
-      if (html5QrcodeScanner) html5QrcodeScanner.pause(true);
+    async function scanQRImageFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
 
-      let rawId = decodedText;
+      try {
+        await stopScanning();
+        const decodedText = await html5QrCode.scanFile(file, true);
+        onScanSuccess(decodedText);
+      } catch (err) {
+        alert("No valid QR code was detected in the selected image. Please try another image.");
+      } finally {
+        e.target.value = '';
+      }
+    }
+
+    function handleManualVerify(e) {
+      e.preventDefault();
+      const val = document.getElementById('manual-student-id').value.trim();
+      if (!val) return alert("Please enter a Student ID");
+      onScanSuccess(val);
+      document.getElementById('manual-student-id').value = '';
+    }
+
+    // ==================== SCAN SUCCESS & VOUCHER REDEMPTION ====================
+    window.activeScannedStudent = null;
+
+    async function onScanSuccess(decodedText) {
+      await stopScanning();
+
+      let rawId = decodedText.trim();
       try {
         const parsed = JSON.parse(decodedText);
         if (parsed.studentId) rawId = parsed.studentId;
       } catch(e){}
 
-      document.getElementById('reader').classList.add('hidden');
+      document.getElementById('reader-container').classList.add('hidden');
       const resDiv = document.getElementById('scan-result');
       const badge = document.getElementById('scan-badge');
       const nameEl = document.getElementById('scan-name');
       const idEl = document.getElementById('scan-id');
+      const deptEl = document.getElementById('scan-dept');
       const semEl = document.getElementById('scan-sem');
+      const warnMsg = document.getElementById('scan-warning-msg');
 
       resDiv.classList.remove('hidden');
-      nameEl.innerText = "Verifying Record...";
+      nameEl.innerText = "Verifying Student Record...";
       idEl.innerText = rawId;
+      deptEl.innerText = "";
       semEl.innerText = "";
+      warnMsg.classList.add('hidden');
       badge.className = "inline-block px-5 py-1.5 rounded-full text-sm font-extrabold mb-3 bg-slate-200 dark:bg-[#333333] text-slate-800 dark:text-slate-200";
       badge.innerText = "CHECKING FIRESTORE";
 
@@ -1402,30 +1777,44 @@
 
         let status = "NOT_FOUND";
         let student = null;
-        let notes = window.appState.userRole === 'admin' ? "Scanned at Campus Gate" : `Scanned at ${window.appState.partnerData.name}`;
+        const scannerName = window.appState.userRole === 'admin' ? "Admin Campus Gate" : (window.appState.partnerData?.name || "Partner Store");
 
         if (snap.exists()) {
           student = snap.data();
-          status = student.isMembershipPaid ? "VALID" : "PAYMENT_PENDING";
+          student.docId = snap.id;
+          const isPaidAndActive = student.isMembershipPaid && !student.isExpired && student.membershipStatus !== 'EXPIRED';
+          status = isPaidAndActive ? "VALID" : "EXPIRED";
         }
 
+        window.activeScannedStudent = student;
+
         nameEl.innerText = student ? (student.fullName || 'Unknown Student') : "Unregistered Student";
+        deptEl.innerText = student ? (student.department || 'JMAP Member') : '';
         semEl.innerText = student ? (student.activeSemester || '') : '';
 
         if (status === "VALID") {
           badge.className = "inline-block px-6 py-2 rounded-full text-base font-black mb-3 bg-emerald-100 text-emerald-800 border-2 border-emerald-400";
           badge.innerText = "VALID ACTIVE MEMBER";
-          resDiv.className = "mt-6 p-6 rounded-2xl border-4 border-emerald-500 bg-emerald-50/50 text-center animate-fade-in";
-        } else if (status === "PAYMENT_PENDING") {
-          badge.className = "inline-block px-6 py-2 rounded-full text-base font-black mb-3 bg-amber-100 text-amber-800 border-2 border-amber-400";
-          badge.innerText = "PAYMENT PENDING / EXPIRED";
-          resDiv.className = "mt-6 p-6 rounded-2xl border-4 border-amber-500 bg-amber-50/50 text-center animate-fade-in";
+          resDiv.className = "mt-6 p-6 rounded-2xl border-4 border-emerald-500 bg-emerald-50/40 text-center animate-fade-in";
+          warnMsg.classList.add('hidden');
+        } else if (status === "EXPIRED") {
+          badge.className = "inline-block px-6 py-2 rounded-full text-base font-black mb-3 bg-rose-100 text-rose-800 border-2 border-rose-500";
+          badge.innerText = "MEMBERSHIP EXPIRED / DISABLED";
+          resDiv.className = "mt-6 p-6 rounded-2xl border-4 border-rose-500 bg-rose-50/40 text-center animate-fade-in";
+          warnMsg.innerText = "⚠️ This QR code has been DISABLED because the membership has expired. Entrance & partner voucher redemptions are not permitted until renewed.";
+          warnMsg.classList.remove('hidden');
         } else {
           badge.className = "inline-block px-6 py-2 rounded-full text-base font-black mb-3 bg-orange-100 text-orange-800 border-2 border-orange-400";
           badge.innerText = "NO RECORD FOUND";
-          resDiv.className = "mt-6 p-6 rounded-2xl border-4 border-orange-500 bg-orange-50/50 text-center animate-fade-in";
+          resDiv.className = "mt-6 p-6 rounded-2xl border-4 border-orange-500 bg-orange-50/40 text-center animate-fade-in";
+          warnMsg.innerText = "⚠️ This Student ID is not registered in the JMAP organization database.";
+          warnMsg.classList.remove('hidden');
         }
 
+        // Render Voucher Redemption Section
+        renderStudentVouchers(student, status === "VALID");
+
+        // Log scan in Firestore
         const logId = Date.now().toString();
         await setDoc(doc(window.db, "scan_logs", logId), {
           studentId: rawId,
@@ -1434,75 +1823,416 @@
           department: student ? student.department : "N/A",
           status: status,
           scannedAt: Date.now(),
-          notes: notes,
-          partnerId: window.appState.userRole === 'partner' ? window.appState.partnerData.id : null,
-          partnerName: window.appState.userRole === 'partner' ? window.appState.partnerData.name : 'Admin'
+          notes: `Scanned by ${scannerName}`,
+          partnerId: window.appState.userRole === 'partner' ? window.appState.partnerData?.id : null,
+          partnerName: scannerName
         });
 
       } catch(err) {
-        console.error(err);
+        console.error("Scan verification error:", err);
         badge.innerText = "CONNECTION ERROR";
       }
     }
 
+    function renderStudentVouchers(student, isValidMember = true) {
+      const section = document.getElementById('scan-vouchers-section');
+      const listEl = document.getElementById('scan-vouchers-list');
+      const subtitle = document.getElementById('scan-vouchers-subtitle');
+      if (!section || !listEl) return;
+
+      if (!student || !isValidMember) {
+        subtitle.innerText = "Voucher access blocked";
+        listEl.innerHTML = `
+          <div class="p-4 rounded-xl bg-slate-100 dark:bg-neutral-800 text-center text-xs text-slate-500 dark:text-slate-400 font-semibold">
+            ${!student ? "Unregistered student cannot claim vouchers." : "Membership is EXPIRED or DISABLED. Student cannot redeem vouchers."}
+          </div>
+        `;
+        return;
+      }
+
+      let vouchers = window.appState.vouchers || [];
+      const role = window.appState.userRole;
+      const partner = window.appState.partnerData;
+
+      if (role === 'partner' && partner) {
+        vouchers = vouchers.filter(v => v.partnerId === partner.id);
+        subtitle.innerText = `Exclusive for ${partner.name}`;
+      } else {
+        subtitle.innerText = `All Partner Store Perks (${vouchers.length} active)`;
+      }
+
+      if (vouchers.length === 0) {
+        listEl.innerHTML = `<div class="p-4 rounded-xl bg-slate-50 dark:bg-neutral-800 text-center text-xs text-slate-400 font-semibold">No vouchers available for this store.</div>`;
+        return;
+      }
+
+      const redemptions = window.appState.redemptions || [];
+      const studentId = student.studentId || student.docId;
+
+      listEl.innerHTML = vouchers.map(v => {
+        const usedCount = redemptions.filter(r => r.voucherId === v.id && r.studentId === studentId).length;
+        const maxCount = parseInt(v.maxUsages) || 1;
+        const remaining = Math.max(0, maxCount - usedCount);
+
+        const isExpired = v.expiryDate ? (new Date(v.expiryDate + 'T23:59:59') < new Date()) : false;
+        const expiryFormatted = v.expiryDate ? formatMMDDYYYY(v.expiryDate) : 'No Expiry';
+
+        let actionBtn = '';
+        if (isExpired) {
+          actionBtn = `<button disabled class="px-3.5 py-1.5 rounded-xl bg-slate-200 dark:bg-neutral-800 text-slate-400 font-bold text-xs cursor-not-allowed">Voucher Expired</button>`;
+        } else if (remaining <= 0) {
+          actionBtn = `<button disabled class="px-3.5 py-1.5 rounded-xl bg-slate-200 dark:bg-neutral-800 text-slate-500 font-bold text-xs cursor-not-allowed"><i class="fa-solid fa-check mr-1"></i> Claimed (${usedCount}/${maxCount})</button>`;
+        } else {
+          actionBtn = `<button onclick="claimVoucher('${v.id}', '${studentId}', '${(student.fullName||'').replace(/'/g, "\'")}')" class="px-4 py-2 rounded-xl bg-pup-gold hover:bg-yellow-500 text-black font-extrabold text-xs shadow-md transition flex items-center gap-1.5">
+            <i class="fa-solid fa-gift"></i> Redeem (${remaining} left)
+          </button>`;
+        }
+
+        const expiryBadge = isExpired
+          ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-700">Expired: ${expiryFormatted}</span>`
+          : (v.expiryDate ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">Expires: ${expiryFormatted}</span>` : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">No Expiry</span>`);
+
+        return `
+          <div class="p-3.5 bg-white dark:bg-[#1A1A1A] rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h5 class="font-extrabold text-sm text-black dark:text-white truncate">${v.title}</h5>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300">${v.partnerName}</span>
+                ${expiryBadge}
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">${v.description || ''}</p>
+              <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-1">
+                Usage limit: <span class="font-mono text-pup-maroon dark:text-pup-gold">${usedCount} / ${maxCount} used</span> (${remaining} remaining)
+              </div>
+            </div>
+            <div class="shrink-0 flex sm:justify-end">
+              ${actionBtn}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function claimVoucher(voucherId, studentId, studentName) {
+      const v = (window.appState.vouchers || []).find(x => x.id === voucherId);
+      if (!v) return alert("Voucher not found.");
+
+      const redeemedBy = window.appState.userRole === 'partner' ? window.appState.partnerData?.name : 'Admin';
+
+      try {
+        const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        const redemptionId = "redempt_" + Date.now();
+
+        await setDoc(doc(window.db, "voucher_redemptions", redemptionId), {
+          id: redemptionId,
+          voucherId: v.id,
+          voucherTitle: v.title,
+          partnerId: v.partnerId,
+          partnerName: v.partnerName,
+          studentId: studentId,
+          studentName: studentName,
+          redeemedAt: Date.now(),
+          redeemedBy: redeemedBy
+        });
+
+        // Also record a scan log entry with voucher info
+        const logId = Date.now().toString();
+        await setDoc(doc(window.db, "scan_logs", logId), {
+          studentId: studentId,
+          studentName: studentName,
+          status: "VALID",
+          scannedAt: Date.now(),
+          notes: `Voucher Redeemed: ${v.title} (${v.partnerName})`,
+          partnerId: v.partnerId,
+          partnerName: v.partnerName,
+          isVoucherRedemption: true,
+          voucherId: v.id,
+          voucherTitle: v.title
+        });
+
+        alert(`Success! "${v.title}" voucher redeemed for ${studentName}.`);
+
+        // Re-render student vouchers
+        if (window.activeScannedStudent) {
+          renderStudentVouchers(window.activeScannedStudent, true);
+        }
+      } catch (err) {
+        console.error("Error claiming voucher:", err);
+        alert("Failed to redeem voucher: " + err.message);
+      }
+    }
+
+    // ==================== TAB 3: LIVE SCAN LOGS & VOUCHER LOGS ====================
+    let logSortAsc = false;
+
+    function toggleLogSortOrder() {
+      logSortAsc = !logSortAsc;
+      const label = document.getElementById('sort-order-label');
+      if (label) label.innerText = logSortAsc ? "Oldest First" : "Newest First";
+      renderScanLogs();
+    }
+
+    function clearLogDateFilter() {
+      const el = document.getElementById('filter-log-date');
+      if (el) el.value = '';
+      renderScanLogs();
+    }
+
     function renderScanLogs() {
       const container = document.getElementById('scan-logs-table');
-      let logs = window.appState.scanLogs;
-      if (window.appState.userRole === 'partner' && window.appState.partnerData) {
+      const counter = document.getElementById('logs-counter');
+      const logsTitle = document.getElementById('logs-title');
+      const logsSubtitle = document.getElementById('logs-subtitle');
+      if (!container) return;
+
+      let logs = [...(window.appState.scanLogs || [])];
+      const isPartner = window.appState.userRole === 'partner' && window.appState.partnerData;
+
+      if (isPartner) {
         logs = logs.filter(l => l.partnerId === window.appState.partnerData.id);
+        if (logsTitle) logsTitle.innerHTML = `<i class="fa-solid fa-ticket text-pup-gold"></i> ${window.appState.partnerData.name} — Voucher Redemption Logs`;
+        if (logsSubtitle) logsSubtitle.innerText = "Real-time records of vouchers redeemed and scans at this business";
+      } else {
+        if (logsTitle) logsTitle.innerHTML = `<i class="fa-solid fa-bolt text-pup-gold"></i> Live Scan & Voucher Redemption Logs`;
+        if (logsSubtitle) logsSubtitle.innerText = "Real-time scan verification and organization activity";
+      }
+
+      // Filter by Date (YYYY-MM-DD input compared with scan date)
+      const dateFilterVal = document.getElementById('filter-log-date')?.value;
+      if (dateFilterVal) {
+        logs = logs.filter(l => {
+          if (!l.scannedAt) return false;
+          const d = new Date(l.scannedAt);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}` === dateFilterVal;
+        });
+      }
+
+      // Filter by Search Query
+      const query = (document.getElementById('filter-log-search')?.value || '').toLowerCase();
+      if (query) {
+        logs = logs.filter(l => 
+          (l.studentName && l.studentName.toLowerCase().includes(query)) ||
+          (l.studentId && l.studentId.toLowerCase().includes(query)) ||
+          (l.notes && l.notes.toLowerCase().includes(query)) ||
+          (l.partnerName && l.partnerName.toLowerCase().includes(query))
+        );
+      }
+
+      // Sort
+      logs.sort((a, b) => {
+        const timeA = a.scannedAt || 0;
+        const timeB = b.scannedAt || 0;
+        return logSortAsc ? timeA - timeB : timeB - timeA;
+      });
+
+      if (counter) {
+        counter.innerText = `${logs.length} scan records found`;
       }
 
       if (logs.length === 0) {
-        container.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400 dark:text-slate-500">No scans logged yet.</td></tr>`;
+        container.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400 dark:text-slate-500">No matching scan logs found.</td></tr>`;
         return;
       }
 
       container.innerHTML = logs.map(l => {
-        let statusTag = l.status === 'VALID'
-          ? `<span class="px-2 py-0.5 rounded font-extrabold bg-emerald-100 text-emerald-800">VALID</span>`
-          : (l.status === 'PAYMENT_PENDING'
-            ? `<span class="px-2 py-0.5 rounded font-extrabold bg-amber-100 text-amber-800">PENDING</span>`
-            : `<span class="px-2 py-0.5 rounded font-extrabold bg-orange-100 text-orange-800">INVALID</span>`);
+        let statusTag = '';
+        if (l.status === 'VALID') {
+          statusTag = `<span class="px-2.5 py-0.5 rounded-full font-extrabold text-[11px] bg-emerald-100 text-emerald-800">VALID</span>`;
+        } else if (l.status === 'EXPIRED') {
+          statusTag = `<span class="px-2.5 py-0.5 rounded-full font-extrabold text-[11px] bg-rose-100 text-rose-800">EXPIRED</span>`;
+        } else {
+          statusTag = `<span class="px-2.5 py-0.5 rounded-full font-extrabold text-[11px] bg-orange-100 text-orange-800">INVALID</span>`;
+        }
 
-        let time = l.scannedAt ? new Date(l.scannedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+        const dateStr = l.scannedAt ? formatMMDDYYYY(l.scannedAt) : 'N/A';
+        const timeStr = l.scannedAt ? formatTime12(l.scannedAt) : 'N/A';
+
+        const isVoucher = l.isVoucherRedemption || (l.notes && l.notes.toLowerCase().includes('voucher'));
+        const noteBadge = isVoucher
+          ? `<span class="font-bold text-amber-700 dark:text-amber-400"><i class="fa-solid fa-gift mr-1"></i>${l.notes || ''}</span>`
+          : `<span class="text-slate-600 dark:text-slate-400">${l.notes || ''}</span>`;
 
         return `
-          <tr class="hover:bg-slate-50 dark:bg-[#222222]:bg-pup-darkCard/50">
-            <td class="py-3 px-4 font-mono text-slate-400 dark:text-slate-500">${time}</td>
-            <td class="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">${l.studentName || 'N/A'}</td>
-            <td class="py-3 px-4 font-mono text-black dark:text-white font-bold">${l.studentId || 'N/A'}</td>
+          <tr class="hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition">
+            <td class="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200">${dateStr}</td>
+            <td class="py-3 px-4 font-mono text-slate-500">${timeStr}</td>
+            <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">${l.studentName || 'N/A'}</td>
+            <td class="py-3 px-4 font-mono font-bold text-black dark:text-white">${l.studentId || 'N/A'}</td>
             <td class="py-3 px-4">${statusTag}</td>
-            <td class="py-3 px-4 text-slate-500 dark:text-slate-400">${l.notes || ''}</td>
+            <td class="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300">${l.partnerName || 'Admin Gate'}</td>
+            <td class="py-3 px-4">${noteBadge}</td>
           </tr>
         `;
       }).join('');
     }
 
+    function downloadScanLogsCSV() {
+      let logs = [...(window.appState.scanLogs || [])];
+      const isPartner = window.appState.userRole === 'partner' && window.appState.partnerData;
+      if (isPartner) {
+        logs = logs.filter(l => l.partnerId === window.appState.partnerData.id);
+      }
+
+      const dateFilterVal = document.getElementById('filter-log-date')?.value;
+      if (dateFilterVal) {
+        logs = logs.filter(l => {
+          if (!l.scannedAt) return false;
+          const d = new Date(l.scannedAt);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}` === dateFilterVal;
+        });
+      }
+
+      if (logs.length === 0) {
+        return alert("No logs available to download for the selected date.");
+      }
+
+      logs.sort((a, b) => (logSortAsc ? (a.scannedAt||0) - (b.scannedAt||0) : (b.scannedAt||0) - (a.scannedAt||0)));
+
+      // CSV Headers
+      const headers = ["Date (MM/DD/YYYY)", "Time", "Student Name", "Student ID", "Program", "Status", "Scanned By / Partner", "Notes / Voucher"];
+      const rows = logs.map(l => [
+        `"${formatMMDDYYYY(l.scannedAt)}"`,
+        `"${formatTime12(l.scannedAt)}"`,
+        `"${(l.studentName || '').replace(/"/g, '""')}"`,
+        `"${(l.studentId || '').replace(/"/g, '""')}"`,
+        `"${(l.department || '').replace(/"/g, '""')}"`,
+        `"${l.status || ''}"`,
+        `"${(l.partnerName || '').replace(/"/g, '""')}"`,
+        `"${(l.notes || '').replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(r => r.join(','))].join('
+');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      const filename = dateFilterVal 
+        ? `jmap_scan_logs_${dateFilterVal}.csv` 
+        : `jmap_scan_logs_all_${Date.now()}.csv`;
+
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // ==================== TAB 4: PARTNER STORES ====================
     function renderStores() {
       const container = document.getElementById('stores-grid');
-      const stores = window.appState.stores;
+      const stores = window.appState.stores || [];
 
       if (stores.length === 0) {
         container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 dark:text-slate-500">No partner stores added yet.</div>`;
         return;
       }
 
-      container.innerHTML = stores.map(s => `
-        <div class="bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm flex justify-between items-center">
-          <div>
-            <h4 class="font-extrabold text-sm text-black dark:text-white">${s.name || 'Store'}</h4>
-            <p class="text-xs text-slate-500 dark:text-slate-400">${s.category || 'Partner Store'} • <span class="font-mono font-bold text-slate-700 dark:text-slate-300">PIN: ${s.pin}</span></p>
+      container.innerHTML = stores.map(s => {
+        const storeVouchers = (window.appState.vouchers || []).filter(v => v.partnerId === (s.id || s.docId));
+        return `
+          <div class="bg-white dark:bg-[#1A1A1A] p-5 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm hover:shadow-md transition flex flex-col justify-between gap-4">
+            <div>
+              <div class="flex justify-between items-start gap-2 mb-2">
+                <div>
+                  <h3 class="font-extrabold text-base text-black dark:text-orange-500">${s.businessName || s.name || 'Store'}</h3>
+                  <p class="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">@${s.name || s.username || 'username'}</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-pup-gold/20 text-amber-900 dark:text-pup-gold border border-pup-gold/30">
+                  ${s.category || 'Partner Store'}
+                </span>
+              </div>
+              <div class="mt-3 flex items-center justify-between text-xs p-2.5 bg-slate-50 dark:bg-neutral-800/60 rounded-xl">
+                <span class="text-slate-500">Cashier PIN:</span>
+                <span class="font-mono font-extrabold tracking-widest text-black dark:text-white">${s.pin || '••••'}</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-2"><i class="fa-solid fa-ticket mr-1 text-pup-gold"></i>${storeVouchers.length} Active Vouchers</p>
+            </div>
+
+            <div class="flex items-center gap-2 border-t border-slate-100 dark:border-neutral-800 pt-3">
+              <button onclick="editStore('${s.docId}')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-pen text-xs"></i> Edit Store
+              </button>
+              <button onclick="deleteStore('${s.docId}')" class="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition" title="Delete Store">
+                <i class="fa-solid fa-trash text-sm"></i>
+              </button>
+            </div>
           </div>
-          <button onclick="deleteStore('${s.docId}')" class="p-2 text-orange-500 hover:bg-orange-50 dark:hover:bg-neutral-900/40 rounded-xl transition">
-            <i class="fa-solid fa-trash text-sm"></i>
-          </button>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
+    function openStoreModal() {
+      document.getElementById('store-doc-id').value = '';
+      document.getElementById('store-biz-name').value = '';
+      document.getElementById('store-name').value = '';
+      document.getElementById('store-cat').value = '';
+      document.getElementById('store-pin').value = '';
+      document.getElementById('store-modal-title').innerText = "Add Partner Store";
+      openModal('modal-store');
+    }
+
+    function editStore(docId) {
+      const store = (window.appState.stores || []).find(s => s.docId === docId);
+      if (!store) return;
+
+      document.getElementById('store-doc-id').value = store.docId;
+      document.getElementById('store-biz-name').value = store.businessName || store.name || '';
+      document.getElementById('store-name').value = store.name || store.username || '';
+      document.getElementById('store-cat').value = store.category || '';
+      document.getElementById('store-pin').value = store.pin || '';
+      document.getElementById('store-modal-title').innerText = "Edit Partner Store";
+      openModal('modal-store');
+    }
+
+    async function saveStore(e) {
+      e.preventDefault();
+      const docId = document.getElementById('store-doc-id').value.trim() || ("biz_" + Date.now());
+      const bizName = document.getElementById('store-biz-name').value.trim();
+      const username = document.getElementById('store-name').value.trim();
+      const cat = document.getElementById('store-cat').value.trim() || "Partner Store";
+      const pin = document.getElementById('store-pin').value.trim();
+
+      if (!bizName || !username || !pin) {
+        return alert("Business Name, Store Username, and 4-Digit PIN are required.");
+      }
+
+      try {
+        const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        await setDoc(doc(window.db, "businesses", docId), {
+          id: docId,
+          businessName: bizName,
+          name: username,
+          category: cat,
+          pin: pin,
+          updatedAt: Date.now()
+        }, { merge: true });
+
+        closeModal('modal-store');
+      } catch (err) {
+        console.error("Error saving store:", err);
+        alert("Failed to save store.");
+      }
+    }
+
+    async function deleteStore(docId) {
+      if (!confirm("Are you sure you want to delete this partner store?")) return;
+      try {
+        const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        await deleteDoc(doc(window.db, "businesses", docId));
+      } catch (err) {
+        console.error("Error deleting store:", err);
+      }
+    }
+
+    // ==================== TAB 5: DISCOUNT VOUCHERS ====================
     function renderVouchers() {
       const container = document.getElementById('vouchers-grid');
-      let vouchers = window.appState.vouchers;
+      let vouchers = window.appState.vouchers || [];
       if (window.appState.userRole === 'partner' && window.appState.partnerData) {
         vouchers = vouchers.filter(v => v.partnerId === window.appState.partnerData.id);
       }
@@ -1512,25 +2242,122 @@
         return;
       }
 
-      container.innerHTML = vouchers.map(v => `
-        <div class="bg-white dark:bg-[#1A1A1A] p-4 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm relative overflow-hidden flex justify-between items-start">
-          <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-pup-gold"></div>
-          <div class="pl-3">
-            <h4 class="font-black text-sm text-slate-800 dark:text-slate-200">${v.title || 'Voucher'}</h4>
-            <p class="text-xs font-bold text-black dark:text-white mb-1">${v.partnerName || 'Partner Store'}</p>
-            <p class="text-xs text-slate-500 dark:text-slate-400">${v.description || ''}</p>
+      container.innerHTML = vouchers.map(v => {
+        const isExpired = v.expiryDate ? (new Date(v.expiryDate + 'T23:59:59') < new Date()) : false;
+        const expiryFormatted = v.expiryDate ? formatMMDDYYYY(v.expiryDate) : 'No Expiration';
+        
+        const expiryBadge = isExpired
+          ? `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-300"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Expired (${expiryFormatted})</span>`
+          : (v.expiryDate ? `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700"><i class="fa-regular fa-calendar mr-1"></i> Expires ${expiryFormatted}</span>` : `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">No Expiration</span>`);
+
+        return `
+          <div class="bg-white dark:bg-[#1A1A1A] p-5 rounded-2xl border border-slate-200 dark:border-neutral-800 shadow-sm relative overflow-hidden flex flex-col justify-between gap-3">
+            <div class="absolute left-0 top-0 bottom-0 w-2 ${isExpired ? 'bg-rose-500' : 'bg-pup-gold'}"></div>
+            <div class="pl-2">
+              <div class="flex items-start justify-between gap-2 mb-1">
+                <h4 class="font-extrabold text-base text-slate-800 dark:text-slate-200">${v.title || 'Voucher'}</h4>
+                ${expiryBadge}
+              </div>
+              <p class="text-xs font-bold text-amber-700 dark:text-pup-gold mb-1">${v.partnerName || 'Partner Store'}</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">${v.description || ''}</p>
+              
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 dark:bg-neutral-800 text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
+                <i class="fa-solid fa-repeat text-pup-gold"></i> Max ${v.maxUsages || 1} redemption per student
+              </div>
+            </div>
+
+            <div class="flex justify-end items-center gap-2 border-t border-slate-100 dark:border-neutral-800 pt-3 pl-2">
+              <button onclick="editVoucher('${v.docId}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition flex items-center gap-1">
+                <i class="fa-solid fa-pen text-xs"></i> Edit
+              </button>
+              <button onclick="deleteVoucher('${v.docId}')" class="admin-only p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition" title="Delete Voucher">
+                <i class="fa-solid fa-trash text-sm"></i>
+              </button>
+            </div>
           </div>
-          <button onclick="deleteVoucher('${v.docId}')" class="admin-only p-2 text-orange-500 hover:bg-orange-50 dark:hover:bg-neutral-900/40 rounded-xl transition">
-            <i class="fa-solid fa-trash text-sm"></i>
-          </button>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
+    function openVoucherModal() {
+      document.getElementById('vouch-doc-id').value = '';
+      document.getElementById('vouch-title').value = '';
+      document.getElementById('vouch-desc').value = '';
+      document.getElementById('vouch-max-usages').value = '1';
+      document.getElementById('vouch-expiry-date').value = '';
+      document.getElementById('voucher-modal-title').innerText = "Configure Discount Voucher";
+      openModal('modal-voucher');
+    }
+
+    function editVoucher(docId) {
+      const v = (window.appState.vouchers || []).find(x => x.docId === docId);
+      if (!v) return;
+
+      document.getElementById('vouch-doc-id').value = v.docId;
+      document.getElementById('vouch-title').value = v.title || '';
+      document.getElementById('vouch-desc').value = v.description || '';
+      document.getElementById('vouch-max-usages').value = v.maxUsages || 1;
+      document.getElementById('vouch-expiry-date').value = v.expiryDate || '';
+
+      const sel = document.getElementById('vouch-store-select');
+      if (sel) {
+        for (let i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === v.partnerId) {
+            sel.selectedIndex = i;
+            break;
+          }
+        }
+      }
+
+      document.getElementById('voucher-modal-title').innerText = "Edit Discount Voucher";
+      openModal('modal-voucher');
+    }
+
+    async function saveVoucher(e) {
+      e.preventDefault();
+      const sel = document.getElementById('vouch-store-select');
+      if (sel.selectedIndex <= 0) return alert('Please select a partner store');
+
+      const title = document.getElementById('vouch-title').value.trim();
+      if (!title) return alert('Voucher title is required');
+
+      const storeId = sel.options[sel.selectedIndex].value;
+      const storeName = sel.options[sel.selectedIndex].innerText;
+      const docId = document.getElementById('vouch-doc-id').value.trim() || ("vouch_" + Date.now());
+
+      try {
+        const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        await setDoc(doc(window.db, "vouchers", docId), {
+          id: docId,
+          partnerId: storeId,
+          partnerName: storeName,
+          title: title,
+          description: document.getElementById('vouch-desc').value.trim(),
+          maxUsages: parseInt(document.getElementById('vouch-max-usages').value) || 1,
+          expiryDate: document.getElementById('vouch-expiry-date').value || '',
+          updatedAt: Date.now()
+        }, { merge: true });
+
+        closeModal('modal-voucher');
+      } catch (err) {
+        console.error("Error saving voucher:", err);
+        alert("Failed to save voucher.");
+      }
+    }
+
+    async function deleteVoucher(docId) {
+      if (!confirm("Are you sure you want to delete this voucher?")) return;
+      try {
+        const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        await deleteDoc(doc(window.db, "vouchers", docId));
+      } catch(e) { console.error(e); }
+    }
+
+    // Modal Helpers
     function openModal(id) {
       document.getElementById(id).classList.remove('hidden', 'jmap-hidden');
       if(id === 'modal-id-card') {
-          setTimeout(resizeIdPass, 50); // Resize when opened
+          setTimeout(resizeIdPass, 50);
       }
     }
     function closeModal(id) {
@@ -1559,7 +2386,7 @@
       document.getElementById('stu-email').value = student.email || '';
       document.getElementById('stu-dept').value = student.department || '';
       document.getElementById('stu-sem').value = student.activeSemester || '';
-      document.getElementById('stu-paid').checked = !!student.isMembershipPaid;
+      document.getElementById('stu-paid').checked = !!(student.isMembershipPaid && !student.isExpired && student.membershipStatus !== 'EXPIRED');
 
       document.getElementById('student-modal-title').innerText = "Edit Student";
       openModal('modal-student');
@@ -1569,8 +2396,9 @@
       e.preventDefault();
       const rawId = document.getElementById('stu-id').value.trim();
       const docId = document.getElementById('stu-doc-id').value.trim() || rawId;
-
       if (!rawId) return alert('Student ID required');
+
+      const isPaid = document.getElementById('stu-paid').checked;
 
       try {
         const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
@@ -1580,7 +2408,9 @@
           email: document.getElementById('stu-email').value,
           department: document.getElementById('stu-dept').value || "BSBA - Marketing Management",
           activeSemester: document.getElementById('stu-sem').value || "2026-2027 | 1st Semester",
-          isMembershipPaid: document.getElementById('stu-paid').checked,
+          isMembershipPaid: isPaid,
+          isExpired: !isPaid,
+          membershipStatus: isPaid ? 'ACTIVE' : 'EXPIRED',
           updatedAt: Date.now()
         }, { merge: true });
 
@@ -1598,103 +2428,6 @@
         await deleteDoc(doc(window.db, "students", docId));
       } catch(e) { console.error(e); }
     }
-
-    function openStoreModal() {
-      document.getElementById('store-doc-id').value = '';
-      document.getElementById('store-name').value = '';
-      document.getElementById('store-cat').value = '';
-      document.getElementById('store-pin').value = '';
-      openModal('modal-store');
-    }
-
-    async function saveStore(e) {
-      e.preventDefault();
-      const name = document.getElementById('store-name').value.trim();
-      const pin = document.getElementById('store-pin').value.trim();
-      if (!name || !pin) return alert('Store Username and PIN required');
-
-      const docId = "biz_" + Date.now();
-      try {
-        const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-        await setDoc(doc(window.db, "businesses", docId), {
-          id: docId,
-          name: name,
-          category: document.getElementById('store-cat').value || "Partner Store",
-          pin: pin
-        });
-        closeModal('modal-store');
-      } catch(e) { console.error(e); }
-    }
-
-    async function deleteStore(docId) {
-      if (!confirm("Delete partner store?")) return;
-      try {
-        const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-        await deleteDoc(doc(window.db, "businesses", docId));
-      } catch(e) { console.error(e); }
-    }
-
-    function openVoucherModal() {
-      document.getElementById('vouch-title').value = '';
-      document.getElementById('vouch-desc').value = '';
-      openModal('modal-voucher');
-    }
-
-    async function saveVoucher(e) {
-      e.preventDefault();
-      const sel = document.getElementById('vouch-store-select');
-      if (sel.selectedIndex <= 0) return alert('Please select a store');
-
-      const title = document.getElementById('vouch-title').value.trim();
-      if (!title) return alert('Voucher title required');
-
-      const storeId = sel.options[sel.selectedIndex].value;
-      const storeName = sel.options[sel.selectedIndex].innerText;
-      const docId = "vouch_" + Date.now();
-
-      try {
-        const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-        await setDoc(doc(window.db, "vouchers", docId), {
-          id: docId,
-          partnerId: storeId,
-          partnerName: storeName,
-          title: title,
-          description: document.getElementById('vouch-desc').value
-        });
-        closeModal('modal-voucher');
-      } catch(e) { console.error(e); }
-    }
-
-    async function deleteVoucher(docId) {
-      if (!confirm("Delete voucher?")) return;
-      try {
-        const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-        await deleteDoc(doc(window.db, "vouchers", docId));
-      } catch(e) { console.error(e); }
-    }
-
-    
-    window.switchLoginMode = switchLoginMode;
-    window.handleAdminLogin = handleAdminLogin;
-    window.handlePartnerLogin = handlePartnerLogin;
-    window.logout = logout;
-    window.switchTab = switchTab;
-    window.renderRoster = renderRoster;
-    window.viewMemberPass = viewMemberPass;
-    window.initScanner = initScanner;
-    window.resetScanner = resetScanner;
-    window.openModal = openModal;
-    window.closeModal = closeModal;
-    window.openStudentModal = openStudentModal;
-    window.editStudent = editStudent;
-    window.saveStudent = saveStudent;
-    window.deleteStudent = deleteStudent;
-    window.openStoreModal = openStoreModal;
-    window.saveStore = saveStore;
-    window.deleteStore = deleteStore;
-    window.openVoucherModal = openVoucherModal;
-    window.saveVoucher = saveVoucher;
-    window.deleteVoucher = deleteVoucher;
 
     async function confirmClearScanLogs() {
       if (!window.appState.scanLogs || window.appState.scanLogs.length === 0) {
@@ -1719,6 +2452,42 @@
       }
     }
 
+    // Expose all handlers to global window scope
+    window.switchLoginMode = switchLoginMode;
+    window.handleAdminLogin = handleAdminLogin;
+    window.handlePartnerLogin = handlePartnerLogin;
+    window.logout = logout;
+    window.switchTab = switchTab;
+    window.renderRoster = renderRoster;
+    window.toggleStudentStatus = toggleStudentStatus;
+    window.expireAllMemberships = expireAllMemberships;
+    window.activateAllMemberships = activateAllMemberships;
+    window.viewMemberPass = viewMemberPass;
+    window.initScanner = initScanner;
+    window.resetScanner = resetScanner;
+    window.onCameraChange = onCameraChange;
+    window.scanQRImageFile = scanQRImageFile;
+    window.handleManualVerify = handleManualVerify;
+    window.claimVoucher = claimVoucher;
+    window.renderStudentVouchers = renderStudentVouchers;
+    window.renderScanLogs = renderScanLogs;
+    window.toggleLogSortOrder = toggleLogSortOrder;
+    window.clearLogDateFilter = clearLogDateFilter;
+    window.downloadScanLogsCSV = downloadScanLogsCSV;
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+    window.openStudentModal = openStudentModal;
+    window.editStudent = editStudent;
+    window.saveStudent = saveStudent;
+    window.deleteStudent = deleteStudent;
+    window.openStoreModal = openStoreModal;
+    window.editStore = editStore;
+    window.saveStore = saveStore;
+    window.deleteStore = deleteStore;
+    window.openVoucherModal = openVoucherModal;
+    window.editVoucher = editVoucher;
+    window.saveVoucher = saveVoucher;
+    window.deleteVoucher = deleteVoucher;
     window.confirmClearScanLogs = confirmClearScanLogs;
 
   </script>
